@@ -1,0 +1,87 @@
+{
+  "blender": "4.3.2",
+  "recipes": [
+    {
+      "recipe": "hatch",
+      "width_mm": 180,
+      "height_mm": 223.90243902439025,
+      "controls": {
+        "Spacing mm": 3.0,
+        "Length mm": 5.0,
+        "Width mm": 1.1,
+        "Density": 2.6,
+        "Jitter degrees": 16.0,
+        "Recipe 0 hatch 1 curve 2 stamp": 0
+      },
+      "polygons_per_plate": [
+        1772,
+        1268,
+        2081,
+        854,
+        855,
+        871,
+        1914,
+        1326,
+        435,
+        523,
+        404,
+        442
+      ]
+    },
+    {
+      "recipe": "curve",
+      "width_mm": 180,
+      "height_mm": 223.90243902439025,
+      "controls": {
+        "Spacing mm": 3.0,
+        "Length mm": 5.0,
+        "Width mm": 2.5,
+        "Density": 2.6,
+        "Jitter degrees": 16.0,
+        "Recipe 0 hatch 1 curve 2 stamp": 1
+      },
+      "polygons_per_plate": [
+        1772,
+        1268,
+        2081,
+        854,
+        855,
+        871,
+        1914,
+        1326,
+        435,
+        523,
+        404,
+        442
+      ]
+    },
+    {
+      "recipe": "stamp",
+      "width_mm": 180,
+      "height_mm": 223.90243902439025,
+      "controls": {
+        "Spacing mm": 3.0,
+        "Length mm": 5.0,
+        "Width mm": 4.0,
+        "Density": 2.6,
+        "Jitter degrees": 16.0,
+        "Recipe 0 hatch 1 curve 2 stamp": 2
+      },
+      "polygons_per_plate": [
+        7088,
+        5072,
+        8324,
+        3416,
+        3420,
+        3484,
+        7656,
+        5304,
+        1740,
+        2092,
+        1616,
+        1768
+      ]
+    }
+  ],
+  "spacing_check_passed": true
+}

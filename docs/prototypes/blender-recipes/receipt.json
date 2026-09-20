@@ -1,0 +1,33 @@
+{
+  "files": {
+    "hatch.png": "2715b2034d4ea80210027a55714284f709ae9452ebdbef168bc17f01b45f4b8c",
+    "curve.png": "b1c269ae42d2d31b4810011f952d010de0a09b466c701f03abdf839b70748c9a",
+    "stamp.png": "979bb19182f0742d6c4f440baf669dcce9ea907df4aa963416d80a00270abd60",
+    "stamp-wide-spacing.png": "36696361ff72c4fa7483cb32df50329e1024293ea60513d7dc078f563948572b",
+    "hatch.svg": "4ff7cc03dcb0b997145e9e1fdc4d6ea66c051161486011d57af8586fefae55a4",
+    "curve.svg": "22c52d40379e7e1fc744613a8fae154dd4d002701d64516190118a4f8c8e488e",
+    "stamp.svg": "670005d1347cd36198b345d8c6c9afe616ca56ad68daa11c223f7e6e22c9e13a",
+    "stamp-wide-spacing.svg": "274fe9b555ab7a4d7f984cc0f5e945d05985bf99f6d6e66a427a7dabc24abe49",
+    "painting-recipes.blend": "954b140d78ca1e59721e2cf334446c1dd83b91e22612713664a9809d3289c054",
+    "rgb-recomposition.png": "365b2f410d0d067fac09c7182a80e01e9a4dcc6606ba83ee9a2586176ed81e33",
+    "mixbox-recomposition.png": "135ed5a9c8063b64a6236bf5ce64e6ed954ab5b9d699cb7c290758b5837a06ef",
+    "recipes.json": "1bb6296f7c238f806cefe6e0241ac1adb038d47c33ed4fb8c3cf566b94357363",
+    "mixbox.json": "fa20161102f3c65640b1e955dd18fcb74ccdd3d692f7b64bffec3d608db0cc25",
+    "index.html": "27e43232a1d972f765db4ee902d464bbe378ba289aa6e4c07ce5b745be41e113",
+    "review-page.png": "cc02768be7cfb3880bd425495d48493fae6585f734ec01e3dfef7e932323247a"
+  },
+  "checks": {
+    "native_node_generation": "passed",
+    "spacing_changes_evaluated_geometry": "passed",
+    "saved_scene_reexport_matches_spacing_variant": "byte-identical",
+    "ported_legacy_svg": "byte-identical to verified source output",
+    "official_mixbox_api": "passed",
+    "gallery_click_and_keyboard": "passed"
+  },
+  "runtime": {
+    "blender": "4.3.2",
+    "blender_numpy": "1.24.3",
+    "pymixbox": "2.0.0"
+  },
+  "scope": "Throwaway prototype; no physical calibration or Mixbox-optimized solve; SVG uses evaluated mesh polygons."
+}

@@ -12,7 +12,8 @@
     "sets:apply": "python3 scripts/project_sets.py && npm run gates:apply",
     "test": "python3 testing/check.py",
     "vendored:check": "node scripts/vendored-check.mjs",
-    "check": "npm run test && npm run map:check && npm run gates:check && npm run vendored:check"
+    "check": "npm run test && npm run map:check && npm run gates:check && npm run vendored:check",
+    "prototype": "bash scripts/prototype.sh"
   },
   "devDependencies": {
     "@intellectronica/ruler": "0.3.44"

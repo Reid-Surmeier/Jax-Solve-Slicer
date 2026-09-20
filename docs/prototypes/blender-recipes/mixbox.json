@@ -1,0 +1,13 @@
+{
+  "distribution": "pymixbox",
+  "version": "2.0.0",
+  "method": "Ordered latent interpolation, decoded once per pixel",
+  "diagnostic_only": true,
+  "warning": "These plates were solved under RGB alpha blending, not optimized for Mixbox. Neither model is calibrated to this machine's paint.",
+  "rgb_vs_mixbox_rmse": 0.04250865599359981,
+  "blue_yellow_half_mix": [
+    41,
+    130,
+    57
+  ]
+}
