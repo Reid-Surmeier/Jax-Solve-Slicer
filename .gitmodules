@@ -1,0 +1,11 @@
+[submodule "repos/numpy/doc/source/_static/scipy-mathjax"]
+	path = repos/numpy/doc/source/_static/scipy-mathjax
+	url = https://github.com/scipy/scipy-mathjax.git
+
+[submodule "repos/numpy/numpy/core/src/umath/svml"]
+	path = repos/numpy/numpy/core/src/umath/svml
+	url = https://github.com/numpy/SVML.git
+
+[submodule "repos/pillow/wheels/multibuild"]
+	path = repos/pillow/wheels/multibuild
+	url = https://github.com/multi-build/multibuild.git
