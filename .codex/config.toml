@@ -1,0 +1,5 @@
+# Written by scripts/project_sets.py from project-sets.json; edit that file, not this one.
+
+[mcp_servers.gitnexus]
+command = "/home/reidsurmeier/.npm-global/bin/gitnexus"
+args = ["mcp"]

@@ -1,0 +1,67 @@
+[
+  {
+    "path": "modules/legacy/src/plotter_separation/__init__.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "4afbccd6c100c6309e385c571390f6c715abed0807c3f426cceda7ebb0cc9aac"
+  },
+  {
+    "path": "modules/legacy/src/plotter_separation/inkset.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "5c5cced5b48a74992e57df18e0dd6d123f79704de1ff2364f2efe398a00453ec"
+  },
+  {
+    "path": "modules/legacy/src/plotter_separation/color.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "08e216617d004fa4a7343c4ca82dc704707c998f704388c55f2d6e38450b6277"
+  },
+  {
+    "path": "modules/legacy/src/plotter_separation/source_prep.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "119618fae96458daee8f8c71fb8a8f1a9d8da19912a67e516a4c47e1c54cbd97"
+  },
+  {
+    "path": "modules/legacy/src/plotter_separation/plate_solver.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "b10fc9aec77e8aed4abed8caa096425bf756a5f955b5fc78051c1c46dca94129"
+  },
+  {
+    "path": "modules/legacy/src/plotter_separation/overprint.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "3c8f9ad5094940dbdf78c024334c2fbebbb32161ec0c23b116dea05091260dea"
+  },
+  {
+    "path": "modules/legacy/src/plotter_separation/stroke_program.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "8c12e810407b5b3cd6ca0a630f08fb1c257fe41d3e40223cf0ae0724f0e928e5"
+  },
+  {
+    "path": "modules/legacy/scripts/generate_micron_alpha_plates.py",
+    "upstream_commit": "3047e9375ba8688f76144c89359387f1af706096",
+    "sha256": "65c1a204af7c16bc64d363080464c7ba31c6e1602da2308fb676b35bf89ad44f"
+  },
+  {
+    "path": "modules/legacy/src/plotter_line_drawing_svg/__init__.py",
+    "upstream_commit": "ebb28918cafba8db13d33488c5ed0ea47c45826e",
+    "sha256": "f25c8fc515db767ceff4de0e5aa61922341ef5c5391ec46c63a6f15fe34065e4"
+  },
+  {
+    "path": "modules/legacy/src/plotter_line_drawing_svg/cli.py",
+    "upstream_commit": "ebb28918cafba8db13d33488c5ed0ea47c45826e",
+    "sha256": "0f4fb2dbe02b92b6f09488902b2d2578414137eb0c6a2c266fcdfdd15b52ec57"
+  },
+  {
+    "path": "modules/legacy/src/plotter_line_drawing_svg/manifests.py",
+    "upstream_commit": "ebb28918cafba8db13d33488c5ed0ea47c45826e",
+    "sha256": "422f6808958416739767f6e176f3873225462d2844c8d697417bbfb8a150808f"
+  },
+  {
+    "path": "modules/legacy/src/plotter_line_drawing_svg/markmaking.py",
+    "upstream_commit": "ebb28918cafba8db13d33488c5ed0ea47c45826e",
+    "sha256": "c257625fa5e95c0716cb38aa0f29a8fc6507782f70179b70c3185fd156c6d6b8"
+  },
+  {
+    "path": "modules/legacy/src/plotter_line_drawing_svg/svg_animation.py",
+    "upstream_commit": "ebb28918cafba8db13d33488c5ed0ea47c45826e",
+    "sha256": "dac283710a45f3cfadf8e602148ac76cdc3a1caf85d7b30f538b0557a81ee522"
+  }
+]
