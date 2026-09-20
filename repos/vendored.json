@@ -10,6 +10,16 @@
       "vendored_at": "2026-09-20T22:41:54.014Z",
       "size_mb": 6.8,
       "pins": null
+    },
+    {
+      "name": "numpy",
+      "url": "https://github.com/numpy/numpy",
+      "prefix": "repos/numpy",
+      "ref": "v1.24.3",
+      "commit": "14bb214bca49b167abc375fa873466a811e62102",
+      "vendored_at": "2026-09-20T22:42:16.671Z",
+      "size_mb": 33,
+      "pins": null
     }
   ]
 }
