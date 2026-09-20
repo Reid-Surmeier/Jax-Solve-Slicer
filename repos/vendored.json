@@ -1,0 +1,15 @@
+{
+  "_generated_by": "vendor-source",
+  "repos": [
+    {
+      "name": "mixbox",
+      "url": "https://github.com/scrtwpns/mixbox",
+      "prefix": "repos/mixbox",
+      "ref": "master",
+      "commit": "a1bdb75a668f638ba066aa74bfd32809ed7fef45",
+      "vendored_at": "2026-09-20T22:41:54.014Z",
+      "size_mb": 6.8,
+      "pins": null
+    }
+  ]
+}
