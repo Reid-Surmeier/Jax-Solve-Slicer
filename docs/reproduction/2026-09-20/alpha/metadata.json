@@ -1,0 +1,241 @@
+{
+  "inkset": {
+    "mode": "micron_xsdk05_full12",
+    "paper_rgb": [
+      255,
+      255,
+      255
+    ],
+    "inks": [
+      {
+        "id": "xsdk05_243",
+        "label": "XSDK05#243 blue black",
+        "rgb": [
+          22,
+          41,
+          55
+        ],
+        "role": "blue_black",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_032",
+        "label": "XSDK05#32 fresh green",
+        "rgb": [
+          0,
+          132,
+          86
+        ],
+        "role": "fresh_green",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_117",
+        "label": "XSDK05#117 sepia",
+        "rgb": [
+          94,
+          61,
+          39
+        ],
+        "role": "sepia",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_021",
+        "label": "XSDK05#21 rose",
+        "rgb": [
+          205,
+          73,
+          134
+        ],
+        "role": "rose",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_003",
+        "label": "XSDK05#3 yellow",
+        "rgb": [
+          245,
+          196,
+          28
+        ],
+        "role": "yellow",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_024",
+        "label": "XSDK05#24 purple",
+        "rgb": [
+          95,
+          59,
+          132
+        ],
+        "role": "purple",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_049",
+        "label": "XSDK05#49 black",
+        "rgb": [
+          16,
+          15,
+          14
+        ],
+        "role": "black",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_005",
+        "label": "XSDK05#5 orange",
+        "rgb": [
+          232,
+          105,
+          35
+        ],
+        "role": "orange",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_019",
+        "label": "XSDK05#19 red",
+        "rgb": [
+          198,
+          39,
+          33
+        ],
+        "role": "red",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_022",
+        "label": "XSDK05#22 burgundy",
+        "rgb": [
+          112,
+          31,
+          62
+        ],
+        "role": "burgundy",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_036",
+        "label": "XSDK05#36 blue",
+        "rgb": [
+          30,
+          91,
+          176
+        ],
+        "role": "blue",
+        "opacity": 1.0
+      },
+      {
+        "id": "xsdk05_138",
+        "label": "XSDK05#138 royal blue",
+        "rgb": [
+          42,
+          64,
+          148
+        ],
+        "role": "royal_blue",
+        "opacity": 1.0
+      }
+    ],
+    "audit": {
+      "mode": "micron_xsdk05_full12",
+      "plate_count": 12,
+      "duplicate_pairs": [],
+      "role_counts": {
+        "blue_black": 1,
+        "fresh_green": 1,
+        "sepia": 1,
+        "rose": 1,
+        "yellow": 1,
+        "purple": 1,
+        "black": 1,
+        "orange": 1,
+        "red": 1,
+        "burgundy": 1,
+        "blue": 1,
+        "royal_blue": 1
+      },
+      "luminance_min": 0.0595,
+      "luminance_max": 0.751,
+      "paper_rgb": [
+        255,
+        255,
+        255
+      ]
+    }
+  },
+  "solve": {
+    "backend": "jax_soft_alpha_direct",
+    "steps": 700,
+    "learning_rate": 0.08,
+    "alpha_prior_weight": 0.003,
+    "tile_pixels": 65536,
+    "loss_history": [
+      0.00031504506478086114,
+      0.00032804763759486377,
+      0.0004085176915396005
+    ],
+    "initial_metrics": {
+      "target": "initializer_only",
+      "rgb_rmse": 0.152862,
+      "rgb_mae": 0.121485,
+      "sigma": 0.34,
+      "candidate_sigmas": [
+        {
+          "sigma": 0.16,
+          "rgb_rmse": 0.335376
+        },
+        {
+          "sigma": 0.22,
+          "rgb_rmse": 0.240465
+        },
+        {
+          "sigma": 0.28,
+          "rgb_rmse": 0.178599
+        },
+        {
+          "sigma": 0.34,
+          "rgb_rmse": 0.152862
+        },
+        {
+          "sigma": 0.42,
+          "rgb_rmse": 0.165633
+        },
+        {
+          "sigma": 0.55,
+          "rgb_rmse": 0.208523
+        }
+      ],
+      "mean_alpha_by_plate": [
+        0.128177,
+        0.031793,
+        0.159874,
+        0.060847,
+        0.012727,
+        0.094579,
+        0.130878,
+        0.054176,
+        0.049623,
+        0.117079,
+        0.029198,
+        0.054201
+      ]
+    },
+    "final_metrics": {
+      "rgb_rmse": 0.01708,
+      "rgb_mae": 0.007149
+    }
+  },
+  "target": {
+    "source_image": "../source.png",
+    "working_size_px": [
+      369,
+      459
+    ],
+    "target_mode": "full",
+    "upscale": "none"
+  }
+}
