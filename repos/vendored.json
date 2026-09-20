@@ -20,6 +20,16 @@
       "vendored_at": "2026-09-20T22:42:16.671Z",
       "size_mb": 33,
       "pins": null
+    },
+    {
+      "name": "pillow",
+      "url": "https://github.com/python-pillow/Pillow",
+      "prefix": "repos/pillow",
+      "ref": "12.2.0",
+      "commit": "3c41c095064200a02672d89cc5ff629eaf4b0d4f",
+      "vendored_at": "2026-09-20T22:43:22.897Z",
+      "size_mb": 72.8,
+      "pins": null
     }
   ]
 }
