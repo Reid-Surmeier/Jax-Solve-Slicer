@@ -1,0 +1,18 @@
+{
+  "svg_paths": 244,
+  "infill_paths": 53,
+  "wide_tie_paths": 36,
+  "anchor_links": 76,
+  "components": {
+    "2px": 1,
+    "12px": 1
+  },
+  "deposited_bounds_mm": [
+    0.0,
+    0.0,
+    228.6,
+    304.8
+  ],
+  "physical_strength_verified": false,
+  "single_route_verified": false
+}

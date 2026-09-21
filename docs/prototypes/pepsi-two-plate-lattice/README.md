@@ -58,3 +58,18 @@ PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild
 /home/reidsurmeier/.local/opt/blender-4.3.2/blender -b --factory-startup --python modules/blender_recipes/green_infill_blender.py
 PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py review
 ```
+
+## Selected parallel refinement
+
+The owner selected the parallel option and asked for wider frame connections and clear ICE/CUCUMBER lettering. This version uses the same 0.20 green alpha threshold and 6 mm hatch pitch, but hatches only the upper body and side regions. It starts again from the two JAX contour plates, so the earlier diagonal support lines do not cross the lettering. Four frame-to-bottle ties are now **18 mm wide**, built from seven overlapping 3 mm tracks plus end crossbars. The remaining contour islands are joined by short centerline links; the longest is 7.493 mm.
+
+![Selected parallel material preview with clear lettering and wide ties](green-infill-parallel-final-black.png)
+![Green selective hatching, blue wide ties, and orange anchor links](green-infill-parallel-final-review.png)
+
+The [final SVG](green-infill-parallel-final.svg) has 244 paths and its [Blender scene](green-infill-parallel-final.blend) keeps the green hatching and wide ties as editable curves. The 3 mm stroke stays within the 228.6 × 304.8 mm envelope. The rendered geometry is one connected region at 2 px and 12 px strokes. This is still a topology prototype: overlapping tracks do not prove a fused plastic tie, and the SVG is not a single continuous machine route.
+
+```bash
+PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py final-plan
+/home/reidsurmeier/.local/opt/blender-4.3.2/blender -b --factory-startup --python modules/blender_recipes/green_infill_blender.py -- --variant parallel-final
+PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py final-review
+```

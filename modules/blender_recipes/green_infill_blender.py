@@ -1,5 +1,6 @@
 """Export three issue-12 infill variants through Blender's evaluated curves."""
 
+import argparse
 import json
 from pathlib import Path
 import sys
@@ -11,15 +12,20 @@ from alpha_contours_blender import evaluated_paths
 from two_plate_blender import OUT, make_curve, save_svg
 
 
-def main():
-    source = OUT / "merged-material.blend"
-    names = ("JAX blue plate | source contours",
-             "JAX green plate | source contours",
-             "JAX merged material | frame and source-derived shading")
-    for name in ("parallel", "diagonal", "crosshatch"):
-        bpy.ops.wm.open_mainfile(filepath=str(source))
+def main(selected):
+    contour_names = ("JAX blue plate | source contours",
+                     "JAX green plate | source contours")
+    for name in selected:
         plan = json.loads((OUT / f"green-infill-{name}-plan.json").read_text())
-        infill = make_curve(f"JAX green plate | {name} infill and anchors", plan["paths_mm"])
+        if name == "parallel-final":
+            bpy.ops.wm.open_mainfile(filepath=str(OUT / "two-plate-contours.blend"))
+            infill = make_curve("JAX green plate | selective infill and wide frame ties",
+                                [plan["frame_mm"]] + plan["paths_mm"])
+            names = contour_names
+        else:
+            bpy.ops.wm.open_mainfile(filepath=str(OUT / "merged-material.blend"))
+            infill = make_curve(f"JAX green plate | {name} infill and anchors", plan["paths_mm"])
+            names = (*contour_names, "JAX merged material | frame and source-derived shading")
         bpy.context.view_layer.update()
         paths = []
         for object_name in (*names, infill.name):
@@ -31,4 +37,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--variant", choices=("parallel", "diagonal", "crosshatch", "parallel-final"))
+    args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    selected = parser.parse_args(args).variant
+    main((selected,) if selected else ("parallel", "diagonal", "crosshatch"))
