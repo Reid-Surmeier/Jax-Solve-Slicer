@@ -1,0 +1,22 @@
+{
+  "blender_version": "4.3.2",
+  "plates": {
+    "blue": {
+      "source_paths": 20,
+      "evaluated_paths": 20,
+      "evaluated_points": 1493,
+      "geometry_nodes": "blue plate | contour controls"
+    },
+    "green": {
+      "source_paths": 58,
+      "evaluated_paths": 58,
+      "evaluated_points": 3720,
+      "geometry_nodes": "green plate | contour controls"
+    }
+  },
+  "support": {
+    "source_paths": 69,
+    "evaluated_paths": 69,
+    "evaluated_points": 141
+  }
+}

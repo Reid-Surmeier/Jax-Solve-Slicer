@@ -1,5 +1,7 @@
 # Pepsi: full-image JAX solve, one black plate, Blender contours
 
+**Rejected as a freestanding facade prototype.** The later owner review found that the short links looked like floating random lines and the 3 mm footprint test alone did not establish fused structural connections. The replacement uses [separate blue and green JAX passes with centerline-anchored shading](../pepsi-two-plate-lattice/README.md). This page remains as evidence of the one-black study.
+
 This is the corrected image-driven study for [issue 12](https://github.com/Reid-Surmeier/Jax-Solve-Slicer/issues/12). It uses the exact supplied `source.png` in the adjacent rejected draft; it does not redraw the Pepsi logo, ICE, CUCUMBER, or the ice by hand.
 
 1. `single_black_solve.py` converts all 906×906 source pixels to grayscale and runs the preserved JAX alpha optimizer for 700 steps with one black ink on white paper. `black-alpha16.png`, `black-alpha-float32.npz`, `black-composite.png`, and `solve-receipt.json` are its outputs. The resulting composite RMSE against the grayscale target is **0.000935**. This is a faithful single-color tonal target, not a proposed deposited toolpath.

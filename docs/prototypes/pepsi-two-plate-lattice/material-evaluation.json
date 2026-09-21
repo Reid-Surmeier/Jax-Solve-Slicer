@@ -1,0 +1,20 @@
+{
+  "svg_paths": 147,
+  "material_components_by_raster_stroke_width": {
+    "2px": 1,
+    "4px": 1,
+    "8px": 1,
+    "12px": 1
+  },
+  "nominal_stroke_mm": 3,
+  "deposited_bounds_mm": [
+    0.0,
+    0.0,
+    228.6,
+    304.8
+  ],
+  "inside_9x12_inch_envelope": true,
+  "centerline_connected": true,
+  "nominal_material_connected": true,
+  "physical_strength_verified": false
+}

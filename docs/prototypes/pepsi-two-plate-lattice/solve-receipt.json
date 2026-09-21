@@ -1,0 +1,131 @@
+{
+  "source_sha256": "98180bf7d812a808500926fdc2cc135f250c7b254c380c47d6c1017e362c7f01",
+  "source_size_px": [
+    906,
+    906
+  ],
+  "target_split": "source luminance density weighted by blue-versus-green channel tanh; weights sum to one",
+  "solver": "preserved solve_alpha_stack_jax run twice, once per source-derived color target",
+  "steps_per_pass": 700,
+  "learning_rate": 0.08,
+  "alpha_prior_weight": 0.003,
+  "tile_pixels": 65536,
+  "passes": {
+    "blue": {
+      "target": "blue-target.png",
+      "inkset": {
+        "mode": "blue_target_black_geometry",
+        "paper_rgb": [
+          255,
+          255,
+          255
+        ],
+        "inks": [
+          {
+            "id": "blue",
+            "label": "blue",
+            "rgb": [
+              0,
+              0,
+              0
+            ],
+            "role": "key_detail",
+            "opacity": 1.0
+          }
+        ],
+        "audit": {
+          "mode": "blue_target_black_geometry",
+          "plate_count": 1,
+          "duplicate_pairs": [],
+          "role_counts": {
+            "key_detail": 1
+          },
+          "luminance_min": 0.0,
+          "luminance_max": 0.0,
+          "paper_rgb": [
+            255,
+            255,
+            255
+          ]
+        }
+      },
+      "loss_history": [
+        2.816589812937309e-06,
+        3.247292625019327e-06,
+        1.1586252185225021e-05,
+        1.0344228940084577e-05,
+        4.184224962955341e-06,
+        7.2354855547018815e-06,
+        9.264977961720433e-06,
+        1.251410685654264e-05,
+        1.1648024155874737e-05,
+        1.370116115140263e-05,
+        5.554396921070293e-06,
+        5.52659685126855e-06,
+        7.048743100313004e-06
+      ],
+      "target_error": {
+        "rgb_rmse": 0.00093,
+        "rgb_mae": 0.000509
+      }
+    },
+    "green": {
+      "target": "green-target.png",
+      "inkset": {
+        "mode": "green_target_black_geometry",
+        "paper_rgb": [
+          255,
+          255,
+          255
+        ],
+        "inks": [
+          {
+            "id": "green",
+            "label": "green",
+            "rgb": [
+              0,
+              0,
+              0
+            ],
+            "role": "key_detail",
+            "opacity": 1.0
+          }
+        ],
+        "audit": {
+          "mode": "green_target_black_geometry",
+          "plate_count": 1,
+          "duplicate_pairs": [],
+          "role_counts": {
+            "key_detail": 1
+          },
+          "luminance_min": 0.0,
+          "luminance_max": 0.0,
+          "paper_rgb": [
+            255,
+            255,
+            255
+          ]
+        }
+      },
+      "loss_history": [
+        2.207535544584971e-05,
+        3.431580262258649e-05,
+        2.154171852453146e-05,
+        1.9777948182309046e-05,
+        2.8810112780774944e-05,
+        1.8048169295070693e-05,
+        1.6219380995607935e-05,
+        1.165093999588862e-05,
+        1.2678568964474835e-05,
+        1.6018546375562437e-05,
+        1.6656125808367506e-05,
+        1.785650965757668e-05,
+        1.803367558750324e-05
+      ],
+      "target_error": {
+        "rgb_rmse": 0.00094,
+        "rgb_mae": 0.000579
+      }
+    }
+  }
+}
