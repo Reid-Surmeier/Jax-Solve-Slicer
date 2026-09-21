@@ -1,0 +1,42 @@
+{
+  "source_svg": "green-infill-parallel-final.svg",
+  "source_svg_sha256": "16ad5d00011c0e0fe44416e675d197d94dabdc7690a67658620924ec54300640",
+  "artifact": "pepsi-parallel-final-9x12-3mm.3mf",
+  "artifact_sha256": "a0182968cf329f290cf68d32e9a0667ce4e88fab601db0a08ed64534fe49cd96",
+  "units": "millimeter",
+  "geometry_stroke_width_mm": 3.0,
+  "assumed_extrusion_height_mm": 3.0,
+  "nominal_nozzle_diameter_mm": 3.0,
+  "nozzle_profile_embedded": false,
+  "bounds_mm": {
+    "min": [
+      -114.3,
+      -152.4,
+      0.0
+    ],
+    "max": [
+      114.3,
+      152.4,
+      3.0
+    ]
+  },
+  "orientation": "portrait, viewed from +Z",
+  "xy_center_mm": [
+    0.0,
+    0.0
+  ],
+  "mesh_vertices": 21466,
+  "mesh_triangles": 43384,
+  "mesh_bodies": 1,
+  "watertight": true,
+  "roundtrip_checked": true,
+  "generation": "Union of round-capped 3 mm SVG centerline strokes, clip to 9x12 inch page, flip SVG Y upright, center XY, extrude 3 mm, export core 3MF.",
+  "tool_versions": {
+    "shapely": "2.1.2",
+    "trimesh": "5.1.0",
+    "mapbox-earcut": "2.1.0",
+    "lxml": "6.1.3"
+  },
+  "physical_strength_verified": false,
+  "single_route_verified": false
+}

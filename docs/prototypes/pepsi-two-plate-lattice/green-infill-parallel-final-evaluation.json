@@ -1,8 +1,9 @@
 {
-  "svg_paths": 244,
-  "infill_paths": 53,
+  "svg_paths": 229,
+  "infill_paths": 51,
   "wide_tie_paths": 36,
-  "anchor_links": 76,
+  "lower_letter_arms": 6,
+  "anchor_links": 69,
   "components": {
     "2px": 1,
     "12px": 1

@@ -61,14 +61,17 @@ PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild
 
 ## Selected parallel refinement
 
-The owner selected the parallel option and asked for wider frame connections and clear ICE/CUCUMBER lettering. This version uses the same 0.20 green alpha threshold and 6 mm hatch pitch, but hatches only the upper body and side regions. It starts again from the two JAX contour plates, so the earlier diagonal support lines do not cross the lettering. Four frame-to-bottle ties are now **18 mm wide**, built from seven overlapping 3 mm tracks plus end crossbars. The remaining contour islands are joined by short centerline links; the longest is 7.493 mm.
+The owner selected the parallel option and asked for wider frame connections and clear ICE/CUCUMBER lettering. This version uses the same 0.20 green alpha threshold and 6 mm hatch pitch, but hatches only the upper body and side regions. It starts again from the two JAX contour plates, so the earlier diagonal support lines do not cross the lettering. Twelve tiny contour fragments were removed and hatch ends were inset farther to reduce edge flares. Four frame-to-bottle ties are now **18 mm wide**, built from seven overlapping 3 mm tracks plus end crossbars. The two lower ties also extend into the outside edges of the ICE letter contours. The remaining contour islands are joined by short centerline links; the longest is 7.493 mm.
 
 ![Selected parallel material preview with clear lettering and wide ties](green-infill-parallel-final-black.png)
 ![Green selective hatching, blue wide ties, and orange anchor links](green-infill-parallel-final-review.png)
 
-The [final SVG](green-infill-parallel-final.svg) has 244 paths and its [Blender scene](green-infill-parallel-final.blend) keeps the green hatching and wide ties as editable curves. The 3 mm stroke stays within the 228.6 × 304.8 mm envelope. The rendered geometry is one connected region at 2 px and 12 px strokes. This is still a topology prototype: overlapping tracks do not prove a fused plastic tie, and the SVG is not a single continuous machine route.
+The [final SVG](green-infill-parallel-final.svg) has 229 paths and its [Blender scene](green-infill-parallel-final.blend) keeps the green hatching and wide ties as editable curves. The 3 mm stroke stays within the 228.6 × 304.8 mm envelope. The rendered geometry is one connected region at 2 px and 12 px strokes. This is still a topology prototype: overlapping tracks do not prove a fused plastic tie, and the SVG is not a single continuous machine route.
+
+The [centered portrait 3MF](pepsi-parallel-final-9x12-3mm.3mf) extrudes the union of the final SVG's 3 mm wide strokes to an **assumed 3 mm height**. Its one watertight mesh measures exactly **228.6 × 304.8 × 3.0 mm** and spans X = −114.3…114.3 mm, Y = −152.4…152.4 mm, Z = 0…3 mm. The 3MF carries millimetre units and model geometry. Set the actual printer profile to a **3 mm nozzle** in the slicer; this model file does not configure the machine or generate the extrusion route. The 3MF was round-trip loaded and checked for one body, watertightness, units, and bounds.
 
 ```bash
+/home/reidsurmeier/.local/opt/blender-4.3.2/blender -b --factory-startup --python modules/blender_recipes/green_infill_blender.py -- --variant clean-base
 PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py final-plan
 /home/reidsurmeier/.local/opt/blender-4.3.2/blender -b --factory-startup --python modules/blender_recipes/green_infill_blender.py -- --variant parallel-final
 PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py final-review

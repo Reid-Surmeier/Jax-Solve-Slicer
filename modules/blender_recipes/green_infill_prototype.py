@@ -85,6 +85,25 @@ def wide_frame_ties():
     return paths
 
 
+def lower_letter_arms(contours):
+    """Carry each lower frame tie into the outside edge of the ICE letterwork."""
+    support = json.loads((OUT / "support-plan.json").read_text())
+    start = 1 + support["shading_paths"]
+    lower_left, lower_right = support["paths_mm"][start + 1], support["paths_mm"][start + 3]
+    arms = []
+    for tie, letter, target_ys, outer_x in (
+        (lower_left, contours[50], (219, 220, 221), min),
+        (lower_right, contours[24], (219, 220, 221), max),
+    ):
+        x0, y0 = tie[1]
+        for offset, target_y in zip((-4, 0, 4), target_ys):
+            nearest_y = min(abs(y - target_y) for _, y in letter)
+            candidates = [point for point in letter if abs(point[1] - target_y) == nearest_y]
+            x1, y1 = outer_x(candidates, key=lambda point: point[0])
+            arms.append([[x0, round(y0 + offset, 3)], [x1, y1]])
+    return arms
+
+
 def connect_all(paths):
     """Attach nested contour islands to the nearest connected centerline."""
     links = []
@@ -103,7 +122,7 @@ def connect_all(paths):
 
 
 def final_plan():
-    mask = green_mask()
+    mask = binary_erosion(green_mask(), iterations=2)
     y, x = np.ogrid[:906, :906]
     # Clear the two text fields; leave upper-body and side hatching.
     mask[(y >= 500) & (y < 745) & (x >= 215) & (x <= 700)] = False
@@ -111,9 +130,10 @@ def final_plan():
     mask[y[:, 0] >= 880, :] = False
     infill = clipped_runs(mask, "horizontal", 24)
     wide_ties = wide_frame_ties()
-    contours = svg_paths(OUT / "two-plate-contours.svg")
+    contours = svg_paths(OUT / "green-infill-final-contours.svg")
+    letter_arms = lower_letter_arms(svg_paths(OUT / "two-plate-contours.svg"))
     frame = json.loads((OUT / "support-plan.json").read_text())["paths_mm"][0]
-    material = contours + [frame] + infill + wide_ties
+    material = contours + [frame] + infill + wide_ties + letter_arms
     _labels, sizes = components(np.asarray(raster(material, 2)) < 128)
     before = len(sizes) - 1
     links = connect_all(material)
@@ -122,10 +142,12 @@ def final_plan():
               "ice_keep_clear_px": [215, 500, 700, 745],
               "cucumber_keep_clear_px": [90, 745, 810, 906],
               "infill_paths": len(infill), "wide_tie_paths": len(wide_ties),
+              "lower_letter_arms": len(letter_arms),
+              "retained_contours": len(contours),
               "tie_width_mm": 18, "tie_count": 4, "frame_mm": frame,
               "components_before_links": before, "anchor_links": len(links),
               "longest_anchor_link_mm": round(max(math.dist(*path) for path in links), 3),
-              "paths_mm": infill + wide_ties + links}
+              "paths_mm": infill + wide_ties + letter_arms + links}
     (OUT / "green-infill-parallel-final-plan.json").write_text(json.dumps(result, indent=2) + "\n")
     print({k: v for k, v in result.items() if k != "paths_mm"}, flush=True)
 
@@ -167,7 +189,7 @@ def final_review():
     name = "parallel-final"
     plan_data = json.loads((OUT / f"green-infill-{name}-plan.json").read_text())
     paths = svg_paths(OUT / f"green-infill-{name}.svg")
-    base_count = 79
+    base_count = plan_data["retained_contours"] + 1
     assert len(paths) == base_count + len(plan_data["paths_mm"])
     counts = {f"{width}px": len(components(np.asarray(raster(paths, width)) < 128)[1]) - 1
               for width in (2, 12)}
@@ -181,7 +203,7 @@ def final_review():
     draw = ImageDraw.Draw(colored)
     first = base_count
     second = first + plan_data["infill_paths"]
-    third = second + plan_data["wide_tie_paths"]
+    third = second + plan_data["wide_tie_paths"] + plan_data["lower_letter_arms"]
     for segment, color in ((paths[first:second], (0, 150, 65)),
                            (paths[second:third], (20, 85, 200)),
                            (paths[third:], (230, 110, 0))):
@@ -189,7 +211,9 @@ def final_review():
             draw.line([(x * SCALE, y * SCALE) for x, y in path], fill=color, width=12)
     colored.save(OUT / f"green-infill-{name}-review.png")
     result = {"svg_paths": len(paths), "infill_paths": plan_data["infill_paths"],
-              "wide_tie_paths": plan_data["wide_tie_paths"], "anchor_links": plan_data["anchor_links"],
+              "wide_tie_paths": plan_data["wide_tie_paths"],
+              "lower_letter_arms": plan_data["lower_letter_arms"],
+              "anchor_links": plan_data["anchor_links"],
               "components": counts, "deposited_bounds_mm": [round(v, 3) for v in bounds],
               "physical_strength_verified": False,
               "single_route_verified": False}
