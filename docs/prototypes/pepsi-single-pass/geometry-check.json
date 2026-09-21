@@ -1,0 +1,19 @@
+{
+  "open_svg_paths": 1,
+  "centerline_crossings": 0,
+  "path_length_mm": 4212.52,
+  "minimum_nonlocal_centerline_separation_mm": 3.543,
+  "local_run_exclusion_mm": 8,
+  "closest_segment_indices": [
+    132,
+    135
+  ],
+  "deposited_bounds_mm": [
+    6.5,
+    38.5,
+    215.167,
+    276.167
+  ],
+  "inside_9x12_inch_envelope": true,
+  "meaning": "No distinct segments separated by >8 mm along the route are closer than the 3 mm tool width; adjacent continuous deposition is excluded."
+}

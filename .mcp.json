@@ -1,5 +1,19 @@
 {
   "mcpServers": {
+    "blender": {
+      "type": "stdio",
+      "command": "/home/reidsurmeier/.local/bin/uvx",
+      "args": [
+        "--from",
+        "mcp-for-blender==2.0.0",
+        "mcp-for-blender"
+      ],
+      "env": {
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876",
+        "DISABLE_TELEMETRY": "true"
+      }
+    },
     "gitnexus": {
       "type": "stdio",
       "command": "/home/reidsurmeier/.npm-global/bin/gitnexus",

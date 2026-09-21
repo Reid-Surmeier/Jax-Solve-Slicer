@@ -1,5 +1,14 @@
 # Written by scripts/project_sets.py from project-sets.json; edit that file, not this one.
 
+[mcp_servers.blender]
+command = "/home/reidsurmeier/.local/bin/uvx"
+args = ["--from", "mcp-for-blender==2.0.0", "mcp-for-blender"]
+
+[mcp_servers.blender.env]
+BLENDER_HOST = "localhost"
+BLENDER_PORT = "9876"
+DISABLE_TELEMETRY = "true"
+
 [mcp_servers.gitnexus]
 command = "/home/reidsurmeier/.npm-global/bin/gitnexus"
 args = ["mcp"]

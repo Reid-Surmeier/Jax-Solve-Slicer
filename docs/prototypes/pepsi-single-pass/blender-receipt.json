@@ -1,0 +1,25 @@
+{
+  "svg": "/home/reidsurmeier/orca/workspaces/Jax-Solve-Slicer/pepsi-single-path/docs/prototypes/pepsi-single-pass/single-path.svg",
+  "splines": 1,
+  "cyclic": false,
+  "points": 295,
+  "start_mm": [
+    8.0,
+    143.0
+  ],
+  "end_mm": [
+    8.0,
+    150.333
+  ],
+  "bounds_mm": [
+    8.0,
+    40.0,
+    213.667,
+    274.667
+  ],
+  "blender_version": "4.3.2",
+  "node_group": "Single path | flat deposited width",
+  "preview_vertices": 3540,
+  "flat_z_range_mm": 0.0,
+  "packed_reference_image": true
+}
