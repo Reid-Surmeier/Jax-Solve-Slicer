@@ -1,7 +1,10 @@
 """Editable Blender Geometry Nodes study driven by the solved alpha contours."""
 
+import argparse
+import hashlib
 import json
 from pathlib import Path
+import sys
 import xml.etree.ElementTree as ET
 
 import bpy
@@ -11,8 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "docs/prototypes/pepsi-jax-one-black"
 
 
-def export():
-    obj = bpy.data.objects["JAX black plate contours"]
+def evaluated_paths(obj):
     evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
     # Blender's evaluated Curve.data still exposes the source points. Converting
     # the evaluated object to a mesh gives the actual Geometry Nodes result.
@@ -24,8 +26,9 @@ def export():
     remaining = {tuple(sorted(edge.vertices)) for edge in mesh.edges}
     paths = []
     while remaining:
-        a, b = next(iter(remaining))
-        current = a if len(neighbors[a]) == 1 else b if len(neighbors[b]) == 1 else a
+        ends = [i for i, links in neighbors.items() if len(links) == 1 and
+                tuple(sorted((i, links[0]))) in remaining]
+        current = ends[0] if ends else next(iter(remaining))[0]
         start = current
         path = [current]
         while True:
@@ -43,18 +46,41 @@ def export():
         if len(points) < 2: continue
         data = "M " + " L ".join(f"{x:.3f},{y:.3f}" for x, y in points)
         elements.append(f'<path d="{data}"/>')
-    svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="228.6mm" height="304.8mm" '
-           'viewBox="0 0 228.6 304.8" fill="none" stroke="black" stroke-width="3" '
-           'stroke-linejoin="round" stroke-linecap="round">' + "".join(elements) + '</svg>\n')
-    path = OUT / "contour-study.svg"
-    path.write_text(svg)
-    assert len(ET.parse(path).getroot().findall("{http://www.w3.org/2000/svg}path")) == len(elements)
-    result = {"svg_paths": len(elements), "evaluated_points": len(mesh.vertices)}
+    result = (elements, len(mesh.vertices))
     evaluated.to_mesh_clear()
     return result
 
 
-def build():
+def write_svg(name, elements):
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="228.6mm" height="304.8mm" '
+           'viewBox="0 0 228.6 304.8" fill="none" stroke="black" stroke-width="3" '
+           'stroke-linejoin="round" stroke-linecap="round">' + "".join(elements) + '</svg>\n')
+    path = OUT / name
+    path.write_text(svg)
+    assert len(ET.parse(path).getroot().findall("{http://www.w3.org/2000/svg}path")) == len(elements)
+    return path
+
+
+def add_lattice(contour_elements):
+    plan = json.loads((OUT / "lattice-plan.json").read_text())
+    svg_sha = hashlib.sha256((OUT / "contour-study.svg").read_bytes()).hexdigest()
+    if svg_sha != plan["contour_svg_sha256"]:
+        raise ValueError("Lattice plan is stale; evaluate contours and regenerate it")
+    curve = bpy.data.curves.new("Generated links and 9x12 frame", "CURVE")
+    curve.dimensions = "3D"
+    for points in [plan["frame_mm"], *plan["links_mm"]]:
+        spline = curve.splines.new("POLY")
+        spline.points.add(len(points)-1)
+        for p, (x, y) in zip(spline.points, points): p.co = (x, 304.8-y, 0, 1)
+    obj = bpy.data.objects.new("JAX lattice | links and 9x12 frame", curve)
+    bpy.context.scene.collection.objects.link(obj)
+    bpy.context.view_layer.update()
+    links, points = evaluated_paths(obj)
+    write_svg("connected-lattice.svg", contour_elements + links)
+    return {"link_and_frame_svg_paths": len(links), "link_evaluated_points": points}
+
+
+def build(with_lattice=False):
     data = json.loads((OUT / "source-contours.json").read_text())
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
@@ -94,14 +120,22 @@ def build():
     modifier.node_group = group
     image = bpy.data.images.load(str(OUT / "black-composite.png")); image.pack()
     bpy.context.view_layer.update()
-    receipt = export()
+    contour_elements, contour_points = evaluated_paths(obj)
+    write_svg("contour-study.svg", contour_elements)
+    receipt = {"svg_paths": len(contour_elements), "evaluated_points": contour_points}
+    if with_lattice:
+        receipt.update(add_lattice(contour_elements))
     receipt.update({"blender_version": bpy.app.version_string, "source_contours": len(data["contours_mm"]),
                     "alpha_image_packed": bool(image.packed_file), "node_group": group.name,
                     "sample_spacing_mm": 1, "smooth_iterations": 2,
                     "known_limit": "Multiple independent contours; overlaps at nominal 3 mm; not a valid one-pass toolpath"})
     (OUT / "blender-contour-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
-    bpy.ops.wm.save_as_mainfile(filepath=str(OUT / "jax-contour-study.blend"))
+    bpy.ops.wm.save_as_mainfile(filepath=str(OUT / ("jax-connected-lattice.blend" if with_lattice else "jax-contour-study.blend")))
     print("JAX_CONTOUR_BLENDER", json.dumps(receipt), flush=True)
 
 
-if __name__ == "__main__": build()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--with-lattice", action="store_true")
+    args = sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else []
+    build(with_lattice=parser.parse_args(args).with_lattice)

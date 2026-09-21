@@ -1,6 +1,8 @@
 {
-  "svg_paths": 70,
+  "svg_paths": 63,
   "evaluated_points": 5327,
+  "link_and_frame_svg_paths": 22,
+  "link_evaluated_points": 47,
   "blender_version": "4.3.2",
   "source_contours": 63,
   "alpha_image_packed": true,

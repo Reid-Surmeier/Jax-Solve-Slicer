@@ -1,9 +1,9 @@
 {
   "source": "Blender Geometry Nodes evaluated contour-study.svg",
-  "svg_paths": 70,
+  "svg_paths": 63,
   "required_svg_paths": 1,
-  "distinct_contour_footprint_overlap_pixels": 5098,
-  "deposited_pixels": 197975,
+  "distinct_contour_footprint_overlap_pixels": 5152,
+  "deposited_pixels": 197969,
   "nominal_tool_width_mm": 3,
   "deposited_bounds_mm": [
     16.86,

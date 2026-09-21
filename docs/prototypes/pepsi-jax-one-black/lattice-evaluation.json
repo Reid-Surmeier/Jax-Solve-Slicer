@@ -1,0 +1,14 @@
+{
+  "svg_paths": 85,
+  "deposited_components": 1,
+  "distinct_path_footprint_overlap_pixels": 5691,
+  "deposited_bounds_mm": [
+    0.0,
+    0.0,
+    228.6,
+    304.8
+  ],
+  "inside_9x12_inch_envelope": true,
+  "connected_lattice": true,
+  "one_continuous_nonoverlapping_toolpath": false
+}
