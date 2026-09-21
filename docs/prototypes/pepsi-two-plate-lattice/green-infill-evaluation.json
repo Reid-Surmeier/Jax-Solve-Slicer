@@ -1,0 +1,34 @@
+{
+  "green_alpha_threshold": 0.2,
+  "variants": {
+    "parallel": {
+      "svg_paths": 246,
+      "infill_paths": 91,
+      "anchor_links": 8,
+      "components": {
+        "2px": 1,
+        "12px": 1
+      }
+    },
+    "diagonal": {
+      "svg_paths": 253,
+      "infill_paths": 94,
+      "anchor_links": 12,
+      "components": {
+        "2px": 1,
+        "12px": 1
+      }
+    },
+    "crosshatch": {
+      "svg_paths": 274,
+      "infill_paths": 124,
+      "anchor_links": 3,
+      "components": {
+        "2px": 1,
+        "12px": 1
+      }
+    }
+  },
+  "physical_strength_verified": false,
+  "single_route_verified": false
+}

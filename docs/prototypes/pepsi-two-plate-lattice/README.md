@@ -38,3 +38,23 @@ This is a **topology and visual prototype**, not a verified freestanding part. R
 ```
 
 The Blender scene and SVG are regenerated after changing contour controls or shading pitch; the support plan carries a hash of the evaluated contour SVG and rejects a stale plan. Blender may create ignored `.blend1` files. The legacy solver remains unchanged.
+
+## Green-area infill variations
+
+This final comparison uses the **same solved green alpha plate** at threshold **0.20**, below the contour threshold of 0.30. It clips 3 mm strokes inside green-dominant regions with a 5 px inset, then connects any remaining infill islands to the existing material. Blue contours and the earlier lattice remain fixed. The colored review uses green for added infill, orange for its anchor links, and black for the previous material; all exported SVG paths are black.
+
+![Parallel, diagonal, and crosshatch green infill variants](green-infill-comparison.png)
+
+| Pattern | Pitch | Added infill paths | Anchor links | Total SVG paths |
+| --- | --- | ---: | ---: | ---: |
+| [Parallel](green-infill-parallel-black.png) | 6 mm | 91 | 8 | 246 |
+| [Diagonal](green-infill-diagonal-black.png) | 8 mm | 94 | 12 | 253 |
+| [Crosshatch](green-infill-crosshatch-black.png) | 12 mm in each direction | 124 | 3 | 274 |
+
+Each variation has its own [Blender scene](green-infill-parallel.blend), SVG, plan JSON, black material preview, and colored review image. The Blender scene keeps the infill as a separate editable curve object. Threshold, pitch, and pattern are controlled by the prototype generator; they are not yet Geometry Nodes controls. All three SVGs rasterize as one connected region at 2 px and nominal 12 px stroke widths. This does not establish weld strength, print order, or a single continuous nozzle route. Visually, parallel infill preserves the lettering best; crosshatch is denser but crowds it.
+
+```bash
+PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py plan
+/home/reidsurmeier/.local/opt/blender-4.3.2/blender -b --factory-startup --python modules/blender_recipes/green_infill_blender.py
+PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py review
+```
