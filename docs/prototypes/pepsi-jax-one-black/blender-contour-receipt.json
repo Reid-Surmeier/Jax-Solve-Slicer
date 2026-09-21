@@ -1,0 +1,11 @@
+{
+  "svg_paths": 70,
+  "evaluated_points": 5327,
+  "blender_version": "4.3.2",
+  "source_contours": 63,
+  "alpha_image_packed": true,
+  "node_group": "JAX plate | contour controls",
+  "sample_spacing_mm": 1,
+  "smooth_iterations": 2,
+  "known_limit": "Multiple independent contours; overlaps at nominal 3 mm; not a valid one-pass toolpath"
+}

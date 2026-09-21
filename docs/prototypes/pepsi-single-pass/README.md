@@ -1,5 +1,7 @@
 # Single path Pepsi prototype
 
+**Rejected draft.** The path below was manually rebuilt from simplified lettering and lost the supplied image's typography and ice detail. The owner rejected it. It remains here only as evidence of that failed direction. The corrected image-driven JAX solve and Blender contour study are in [`../pepsi-jax-one-black/`](../pepsi-jax-one-black/README.md).
+
 [Prototype issue](https://github.com/Reid-Surmeier/Jax-Solve-Slicer/issues/12). Source: the user supplied `source.png` (unaltered copy from `.orca/drops`). This is a separate, throwaway study of a nominal 3 mm continuous extrusion, not a machine-ready file.
 
 Open `single-path.blend`. Select **EDIT PATH | one start, one end**, enter Edit Mode, and move curve points. The Geometry Nodes modifier turns that curve into a flat 3 mm footprint preview. Its `Tool width mm` input is exposed for comparison; the evaluated demo and validation use exactly 3 mm. The source image is packed in the file and hidden as a reference object. `single-path.svg` is a flat vector drawing in millimeters, exported from the saved Blender curve.
