@@ -12,6 +12,10 @@ This replaces the rejected short-link prototype under [issue 12](https://github.
 ![Green source-derived JAX pass](green-black-preview.png)
 ![Merged 3 mm black plastic layer](merged-material-3mm.png)
 
+The black preview hides plate provenance. In the inspection render below, **blue** is the blue target's 20 SVG contours, **green** is the green target's 58 SVG contours, and **gray** is the 69 support and frame paths. The green solve supplies the outer bottle silhouette, ICE, CUCUMBER, and much of the cucumber and ice detail. At the 3 mm preview width, 104,291 of its 134,572 drawn pixels (77.5%) are outside the blue and support strokes. Colors here identify source paths only; the exported material remains one black layer.
+
+![Blue and green JAX paths separated from gray support paths](two-pass-provenance.png)
+
 The review image colors the generated shading and frame blue and the final centerline links red. The exported SVG uses black for every stroke.
 
 ![Support layout for review](support-review.png)
