@@ -70,6 +70,8 @@ The [final SVG](green-infill-parallel-final.svg) has 229 paths and its [Blender 
 
 The [centered portrait 3MF](pepsi-parallel-final-9x12-3mm.3mf) extrudes the union of the final SVG's 3 mm wide strokes to an **assumed 3 mm height**. Its one watertight mesh measures exactly **228.6 × 304.8 × 3.0 mm** and spans X = −114.3…114.3 mm, Y = −152.4…152.4 mm, Z = 0…3 mm. The 3MF carries millimetre units and model geometry. Set the actual printer profile to a **3 mm nozzle** in the slicer; this model file does not configure the machine or generate the extrusion route. The 3MF was round-trip loaded and checked for one body, watertightness, units, and bounds.
 
+The [flat Rhino 3DM](pepsi-parallel-final-svg-curves.3dm) contains the final SVG as **229 separate editable curves** on six named layers. It has no mesh, surface, solid, or extrusion; every curve lies at Z = 0. The file is centered at the world origin, uses millimetres, and remains portrait. Because the SVG frame centerline is inset by half the nominal stroke, curve bounds are 225.6 × 301.8 mm; each object's 3 mm plot weight records the intended 228.6 × 304.8 mm material extent. The [3DM receipt](pepsi-parallel-final-svg-curves-3dm-receipt.json) records object and layer counts, hashes, units, placement, and bounds.
+
 ```bash
 /home/reidsurmeier/.local/opt/blender-4.3.2/blender -b --factory-startup --python modules/blender_recipes/green_infill_blender.py -- --variant clean-base
 PYTHONPATH=modules/blender_recipes /home/reidsurmeier/plotter-separation-rebuild/.venv/bin/python modules/blender_recipes/green_infill_prototype.py final-plan

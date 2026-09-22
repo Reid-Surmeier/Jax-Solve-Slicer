@@ -1,0 +1,45 @@
+{
+  "artifact": "pepsi-parallel-final-svg-curves.3dm",
+  "artifact_sha256": "13a8fce64ed29c2f4375656d7b3849a97b339b93d80af1f6a368e7ff3bb64191",
+  "source_svg": "green-infill-parallel-final.svg",
+  "source_svg_sha256": "16ad5d00011c0e0fe44416e675d197d94dabdc7690a67658620924ec54300640",
+  "rhino3dm_version": "8.35.0",
+  "rhino_file_version": 8,
+  "units": "millimeters",
+  "object_count": 229,
+  "layer_counts": {
+    "JAX_CONTOURS": 66,
+    "PAGE_FRAME": 1,
+    "GREEN_PARALLEL_INFILL": 51,
+    "WIDE_FRAME_TIES": 36,
+    "LOWER_ICE_CONNECTIONS": 6,
+    "CONNECTIVITY_LINKS": 69
+  },
+  "geometry_types": [
+    "Curve"
+  ],
+  "z_bounds_mm": [
+    0.0,
+    0.0
+  ],
+  "centerline_bounds_mm": {
+    "min": [
+      -112.8,
+      -150.9,
+      0.0
+    ],
+    "max": [
+      112.8,
+      150.9,
+      0.0
+    ]
+  },
+  "nominal_stroke_width_mm": 3.0,
+  "nominal_material_dimensions_mm": [
+    228.6,
+    304.8
+  ],
+  "centered_xy": true,
+  "orientation": "portrait",
+  "has_thickness": false
+}
