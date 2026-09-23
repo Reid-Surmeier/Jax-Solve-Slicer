@@ -148,6 +148,13 @@ class Browser:
     def get(self, url):
         if not os.environ.get("BROWSERBASE_API_KEY"):
             return StealthyFetcher.fetch(url, headless=True, network_idle=True, timeout=60000)
+        try:
+            return self.render(url)
+        except Exception:  # Browserbase sessions time out mid-crawl: reconnect once with a fresh one
+            self.close()
+            return self.render(url)
+
+    def render(self, url):
         if self.tab is None:
             from patchright.sync_api import sync_playwright
             self.pw = sync_playwright().start()
@@ -164,9 +171,13 @@ class Browser:
         return page
 
     def close(self):
-        if self.browser:
-            self.browser.close()
+        if self.pw:
+            try:
+                self.browser.close()
+            except Exception:  # already disconnected
+                pass
             self.pw.stop()
+        self.pw = self.browser = self.tab = None
 
 
 def site(s):
@@ -178,7 +189,7 @@ def site(s):
             url, depth = queue.pop(0)
             pages += 1
             try:
-                page = browser.get(url) if s.get("browser") else Fetcher.get(url, timeout=30)
+                page = browser.get(url) if s.get("browser") else Fetcher.get(url, timeout=20, retries=1)
                 if page.status in (403, 429, 503) and not s.get("browser"):  # blocked plain fetch: render it instead
                     page = browser.get(url)
             except Exception as e:  # one bad page must not end the crawl
@@ -254,7 +265,7 @@ def instagram(handle):
 
 def download(c):
     try:
-        r = Fetcher.get(c["image_url"], timeout=60)
+        r = Fetcher.get(c["image_url"], timeout=45, retries=1)
         if r.status != 200:
             return c, None, f"http {r.status}"
         im = Image.open(io.BytesIO(r.body))
