@@ -1,0 +1,88 @@
+{
+  "rmse": 0.2075,
+  "blurred_rmse": 0.0488,
+  "marks": 1547,
+  "dips": 237,
+  "marks_per_cell": {
+    "0": 6,
+    "1": 67,
+    "2": 107,
+    "3": 140,
+    "4": 102,
+    "5": 47,
+    "6": 20,
+    "7": 6,
+    "8": 4,
+    "9": 1
+  },
+  "marks_per_tool": {
+    "sponge-L": 463,
+    "sponge-M": 215,
+    "ring": 328,
+    "diamond": 237,
+    "square": 179,
+    "dot": 125
+  },
+  "marks_per_strength": {
+    "0.3": 811,
+    "0.6": 178,
+    "0.9": 558
+  },
+  "print_order": [
+    {
+      "ink": "XSDK05#3 yellow",
+      "marks": 285
+    },
+    {
+      "ink": "XSDK05#5 orange",
+      "marks": 266
+    },
+    {
+      "ink": "XSDK05#21 rose",
+      "marks": 186
+    },
+    {
+      "ink": "XSDK05#19 red",
+      "marks": 159
+    },
+    {
+      "ink": "XSDK05#117 sepia",
+      "marks": 46
+    },
+    {
+      "ink": "XSDK05#22 burgundy",
+      "marks": 38
+    },
+    {
+      "ink": "XSDK05#32 fresh green",
+      "marks": 81
+    },
+    {
+      "ink": "XSDK05#36 blue",
+      "marks": 73
+    },
+    {
+      "ink": "XSDK05#24 purple",
+      "marks": 195
+    },
+    {
+      "ink": "XSDK05#138 royal blue",
+      "marks": 17
+    },
+    {
+      "ink": "XSDK05#243 blue black",
+      "marks": 50
+    },
+    {
+      "ink": "XSDK05#49 black",
+      "marks": 151
+    }
+  ],
+  "jax": "0.10.0",
+  "backend": "gpu",
+  "steps": 1200,
+  "grid": [
+    20,
+    25
+  ]
+}
