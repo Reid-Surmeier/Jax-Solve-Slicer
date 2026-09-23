@@ -26,6 +26,7 @@ from urllib.parse import urljoin, urlparse
 
 from PIL import Image, ImageOps, ImageStat
 from scrapling.fetchers import Fetcher, StealthyFetcher
+from scrapling.parser import Selector
 
 HERE = Path(__file__).resolve().parent
 MODEL = "google/gemini-2.5-flash-lite"
@@ -128,40 +129,75 @@ def artsy(slug):
         after = conn["pageInfo"]["endCursor"]
 
 
+class Browser:
+    """A rendered page as a Scrapling Selector: one Browserbase session per crawl when a key is set, else Scrapling's local browser."""
+
+    def __init__(self):
+        self.pw = self.browser = self.tab = None
+
+    def get(self, url):
+        if not os.environ.get("BROWSERBASE_API_KEY"):
+            return StealthyFetcher.fetch(url, headless=True, network_idle=True, timeout=60000)
+        if self.tab is None:
+            from patchright.sync_api import sync_playwright
+            self.pw = sync_playwright().start()
+            self.browser = self.pw.chromium.connect_over_cdp(f"wss://connect.browserbase.com?apiKey={os.environ['BROWSERBASE_API_KEY']}")
+            ctx = self.browser.contexts[0] if self.browser.contexts else self.browser.new_context()
+            self.tab = ctx.pages[0] if ctx.pages else ctx.new_page()
+        resp = self.tab.goto(url, wait_until="load", timeout=60000)
+        self.tab.wait_for_timeout(2500)
+        for _ in range(8):  # lazy-loaded galleries only fill in as they scroll into view
+            self.tab.mouse.wheel(0, 4000)
+            self.tab.wait_for_timeout(400)
+        page = Selector(self.tab.content(), url=url)
+        page.status = resp.status if resp else 200
+        return page
+
+    def close(self):
+        if self.browser:
+            self.browser.close()
+            self.pw.stop()
+
+
 def site(s):
     start, match = s["url"], s.get("match")
     host = urlparse(start).netloc
-    queue, seen, pages = [(start, 0)], {start}, 0
-    while queue and pages < s.get("max_pages", 80):
-        url, depth = queue.pop(0)
-        pages += 1
-        try:
-            page = StealthyFetcher.fetch(url, headless=True, network_idle=True, timeout=60000) if s.get("stealth") else Fetcher.get(url, timeout=30)
-        except Exception as e:  # one bad page must not end the crawl
-            print(f"  page failed {url}: {e}", file=sys.stderr)
-            continue
-        if page.status != 200:
-            continue
-        title = (page.css("title::text").get() or "").strip()
-        for img in page.css("img"):
-            src = best_src(img.attrib)
-            if not src or SKIP_SRC.search(src):
+    queue, seen, pages, browser = [(start, 0)], {start}, 0, Browser()
+    try:
+        while queue and pages < s.get("max_pages", 80):
+            url, depth = queue.pop(0)
+            pages += 1
+            try:
+                page = browser.get(url) if s.get("browser") else Fetcher.get(url, timeout=30)
+                if page.status in (403, 429, 503) and not s.get("browser"):  # blocked plain fetch: render it instead
+                    page = browser.get(url)
+            except Exception as e:  # one bad page must not end the crawl
+                print(f"  page failed {url}: {e}", file=sys.stderr)
                 continue
-            text, node = img.attrib.get("alt") or img.attrib.get("title") or "", img.parent
-            for _ in range(3):
-                if text or node is None:
-                    break
-                text, node = (node.get_all_text(strip=True) or "")[:400], node.parent
-            full = urljoin(url, src)
-            yield dict(image_key=full, image_url=full, source="site", source_url=url, source_text=" | ".join(x for x in (text, title) if x))
-        for a in page.css("a[href]"):
-            href = urljoin(url, a.attrib["href"]).split("#")[0]
-            if IMG_EXT.search(href) and not SKIP_SRC.search(href):
-                yield dict(image_key=href, image_url=href, source="site", source_url=url, source_text=" | ".join(x for x in ((a.get_all_text(strip=True) or "")[:400], title) if x))
-            elif urlparse(href).netloc == host and href not in seen and depth < s.get("depth", 2) and (not match or match in href.lower()):
-                seen.add(href)
-                queue.append((href, depth + 1))
-        time.sleep(0.5)
+            if page.status != 200:
+                continue
+            title = (page.css("title::text").get() or "").strip()
+            for img in page.css("img"):
+                src = best_src(img.attrib)
+                if not src or SKIP_SRC.search(src):
+                    continue
+                text, node = img.attrib.get("alt") or img.attrib.get("title") or "", img.parent
+                for _ in range(3):
+                    if text or node is None:
+                        break
+                    text, node = (node.get_all_text(strip=True) or "")[:400], node.parent
+                full = urljoin(url, src)
+                yield dict(image_key=full, image_url=full, source="site", source_url=url, source_text=" | ".join(x for x in (text, title) if x))
+            for a in page.css("a[href]"):
+                href = urljoin(url, a.attrib["href"]).split("#")[0]
+                if IMG_EXT.search(href) and not SKIP_SRC.search(href):
+                    yield dict(image_key=href, image_url=href, source="site", source_url=url, source_text=" | ".join(x for x in ((a.get_all_text(strip=True) or "")[:400], title) if x))
+                elif urlparse(href).netloc == host and href not in seen and depth < s.get("depth", 2) and (not match or match in href.lower()):
+                    seen.add(href)
+                    queue.append((href, depth + 1))
+            time.sleep(0.5)
+    finally:
+        browser.close()
 
 
 def instagram(handle):
@@ -215,7 +251,11 @@ def describe(name, c, im):
             d = Fetcher.post("https://openrouter.ai/api/v1/chat/completions", json=body, timeout=120,
                              headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"}).json()
             text = d["choices"][0]["message"]["content"].strip().removeprefix("```json").removesuffix("```")
-            return json.loads(text), float((d.get("usage") or {}).get("cost") or 0)
+            out = json.loads(text)
+            out = out[0] if isinstance(out, list) and out else out  # the model sometimes wraps the object in a list
+            if not isinstance(out, dict):
+                raise ValueError(f"not an object: {text[:80]}")
+            return out, float((d.get("usage") or {}).get("cost") or 0)
         except Exception as e:  # malformed reply or transient failure: retry, then leave undescribed
             err = e
             time.sleep(2 * (attempt + 1))

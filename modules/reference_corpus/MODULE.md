@@ -11,7 +11,7 @@ depends-on: []
 
 A closed list of painters (`artists.json`) and up to 500 kept artworks each. Printmakers count only through their prints.
 
-Sources, in order, stopping once an artist's limit is reached: Artsy's public GraphQL, the artist's and galleries' own sites (Scrapling; `stealth` sites use its browser), then Instagram through the Scrape Creators API. Every image is downloaded, deduplicated per artist by dHash, and given one OpenRouter vision call (`google/gemini-2.5-flash-lite`) that classifies it and writes `depicts`.
+Sources, in order, stopping once an artist's limit is reached: Artsy's public GraphQL, the artist's and galleries' own sites (Scrapling; `browser` sites, and any page that answers 403/429/503, render in one Browserbase session per crawl, or Scrapling's local browser when no Browserbase key is set), then Instagram through the Scrape Creators API. Every image is downloaded, deduplicated per artist by dHash, and given one OpenRouter vision call (`google/gemini-2.5-flash-lite`) that classifies it and writes `depicts`.
 
 `outputs/reference-corpus/corpus.sqlite` (git-ignored, with `images/<artist>/`):
 
