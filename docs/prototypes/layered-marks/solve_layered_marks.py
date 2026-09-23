@@ -1,8 +1,9 @@
 """PROTOTYPE, throwaway: JAX solves grid-locked stamps plus dragged wash strokes against an image.
 
 1. The pencil grid is measured from the reference (period and phase) and kept.
-2. Underlayer: a wash brush is *dragged*. Per ink and grid cell JAX may lay one stroke: angle, length,
-   offset and dilution. Ink runs out along the drag, so each stroke fades toward its end.
+2. Underlayer: a wash brush is *dragged*. Per ink and grid cell JAX may lay one stroke (angle, length,
+   offset). All drags of one ink merge into a single wet wash at one dilution per ink: overlapping
+   strokes of the same colour unify instead of darkening.
 3. Stamps: five square-based tools, fixed size, rotatable, locked to Close's diamond lattice (cell
    centres and grid crossings, tiny wobble only). Per ink and lattice point: one tool or none,
    dilution and rotation.
@@ -40,7 +41,7 @@ STAMPS = {
     "slab": (0.40, 0.20, 0.06),
     "chip": (0.10, 0.10, 0.02),
 }
-BRUSH = {"name": "wash-brush", "width": 1.2, "min_len": 0.8, "max_len": 3.5, "fade": 0.35}  # grid units
+BRUSH = {"name": "wash-brush", "width": 1.2, "min_len": 0.8, "max_len": 3.5}  # grid units
 PER_DIP = {"square-L": 7, "square-M": 9, "square-S": 12, "slab": 8, "chip": 16, "wash-brush": 3}
 NAMES = list(STAMPS)
 GEOM = jnp.asarray([STAMPS[t] for t in NAMES]) * G
@@ -134,15 +135,14 @@ def stamp_fp(off, ang, geom):
 
 
 def brush_fp(off, ang, length):
-    """(I,NY,NX,P,P): a round wash brush dragged along a segment; ink fades toward the end."""
+    """(I,NY,NX,P,P): shape of a round wash brush dragged along a segment (1 inside, 0 outside)."""
     c, s = jnp.cos(ang)[..., None, None], jnp.sin(ang)[..., None, None]
     px, py = BPX - off[..., 0, None, None], BPY - off[..., 1, None, None]
     along, across = c * px + s * py, -s * px + c * py
     half = length[..., None, None] / 2
     t = jnp.clip(along, -half, half)
     sdf = jnp.sqrt((along - t) ** 2 + across ** 2 + 1e-6) - BRUSH["width"] * G / 2
-    fade = 1 - BRUSH["fade"] * (t + half) / (2 * half + 1e-6)
-    return watercolor(sdf, 0.1 * G) * fade
+    return jax.nn.sigmoid(-sdf / 0.4)
 
 
 def overlap_add(patches, stride, reach):
@@ -166,7 +166,7 @@ def lattice_mask(ny2, nx2):
     return jnp.asarray(centre | crossing)
 
 
-def ink_logt(sp, so, sa, bp, bo, ba, bl):
+def ink_logt(sp, so, sa, bp, bo, ba, bl, bs):
     """Log transmittance per ink from stamps and brush drags: (I,H,W)."""
     choice = sp[..., :-1].reshape(sp.shape[:3] + (T, S))
 
@@ -177,7 +177,8 @@ def ink_logt(sp, so, sa, bp, bo, ba, bl):
 
     stamps = overlap_add(sum(one(t) for t in range(T)), H2, S_REACH)
     bfp = jax.checkpoint(brush_fp)(bo, ba, bl)
-    brush = overlap_add(sum(bp[..., k, None, None] * jnp.log1p(-STRENGTHS[k] * bfp * 0.999) for k in range(S)), G, B_REACH)
+    union = 1 - jnp.exp(overlap_add(bp[..., None, None] * jnp.log1p(-bfp * 0.999), G, B_REACH))  # merged wash shape
+    brush = jnp.log1p(-bs[:, None, None] * union * 0.999)                   # one dilution per ink: overlaps unify
     return stamps + brush
 
 
@@ -202,11 +203,11 @@ def blur(img, sigma=G / 2):
 
 def geometry(params):
     """Raw params -> bounded, physically meaningful values."""
-    s_lg, s_u, s_ang, b_lg, b_u, b_ang, b_len = params
+    s_lg, s_u, s_ang, b_lg, b_u, b_ang, b_len, b_str = params
     s_off = 0.08 * G * jnp.tanh(s_u)                   # stamps: tiny wobble, the lattice is kept
     b_off = 0.35 * G * jnp.tanh(b_u)
     b_len = G * (BRUSH["min_len"] + (BRUSH["max_len"] - BRUSH["min_len"]) * jax.nn.sigmoid(b_len))
-    return s_lg, s_off, s_ang, b_lg, b_off, b_ang, b_len
+    return s_lg, s_off, s_ang, b_lg, b_off, b_ang, b_len, b_str
 
 
 def straight_through(lg, key, noise, mask=None):
@@ -226,17 +227,19 @@ def solve(target):
     params = (0.01 * jax.random.normal(ks[0], (I, 2 * ny, 2 * nx, T * S + 1)).at[..., -1].set(1.0),
               jnp.zeros((I, 2 * ny, 2 * nx, 2)),
               jax.random.uniform(ks[1], (I, 2 * ny, 2 * nx), maxval=jnp.pi / 2),
-              0.01 * jax.random.normal(ks[2], (I, ny, nx, S + 1)).at[..., -1].set(1.0),
+              0.01 * jax.random.normal(ks[2], (I, ny, nx, 2)).at[..., -1].set(1.0),
               jnp.zeros((I, ny, nx, 2)),
               jax.random.uniform(ks[3], (I, ny, nx), maxval=jnp.pi),
-              jnp.zeros((I, ny, nx)))
+              jnp.zeros((I, ny, nx)),
+              jnp.zeros((I, S)))
 
     def loss(params, key, noise):
-        s_lg, s_off, s_ang, b_lg, b_off, b_ang, b_len = geometry(params)
-        k1, k2 = jax.random.split(key)
+        s_lg, s_off, s_ang, b_lg, b_off, b_ang, b_len, b_str = geometry(params)
+        k1, k2, k3 = jax.random.split(key, 3)
         sp = straight_through(s_lg, k1, noise, mask)
         bp = straight_through(b_lg, k2, noise)
-        img = composite(ink_logt(sp, s_off, s_ang, bp[..., :-1], b_off, b_ang, b_len), base)
+        bs = straight_through(b_str, k3, noise) @ jnp.asarray(STRENGTHS)  # one wash dilution per ink
+        img = composite(ink_logt(sp, s_off, s_ang, bp[..., 0], b_off, b_ang, b_len, bs), base)
         fit = jnp.mean((img - tgt) ** 2) + jnp.mean((blur(img) - tgt_b) ** 2)
         return fit + STAMP_COST * jnp.mean(1 - sp[..., -1]) * I + BRUSH_COST * jnp.mean(1 - bp[..., -1]) * I
 
@@ -245,7 +248,7 @@ def solve(target):
     best = (float("inf"), params)
     m = jax.tree_util.tree_map(jnp.zeros_like, params)
     v = jax.tree_util.tree_map(jnp.zeros_like, params)
-    lrs = (0.05, 0.05, 0.03, 0.05, 0.05, 0.03, 0.05)
+    lrs = (0.05, 0.05, 0.03, 0.05, 0.05, 0.03, 0.05, 0.05)
     for step in range(STEPS):  # hand-written Adam, as in the legacy solve
         noise = float(0.6 * (0.02 / 0.6) ** (step / (STEPS - 1)))
         val, g = grad(params, jax.random.PRNGKey(10_000 + step), noise)
@@ -259,18 +262,18 @@ def solve(target):
                 best = (clean, params)
         if step % 250 == 0 or step == STEPS - 1:
             print(f"step {step} noise {noise:.3f} loss {float(val):.5f} best {best[0]:.5f}", flush=True)
-    s_lg, s_off, s_ang, b_lg, b_off, b_ang, b_len = geometry(best[1])
+    s_lg, s_off, s_ang, b_lg, b_off, b_ang, b_len, b_str = geometry(best[1])
     s_choice = jnp.where(mask[None], jnp.argmax(s_lg, -1), T * S)
     return dict(s_choice=np.asarray(s_choice), s_off=np.asarray(s_off), s_ang=np.asarray(s_ang),
                 b_choice=np.asarray(jnp.argmax(b_lg, -1)), b_off=np.asarray(b_off), b_ang=np.asarray(b_ang),
-                b_len=np.asarray(b_len), base=base)
+                b_len=np.asarray(b_len), b_str=np.asarray(jnp.asarray(STRENGTHS)[jnp.argmax(b_str, -1)]), base=base)
 
 
 def render_hard(sol, upto=None):
     sp = jax.nn.one_hot(jnp.asarray(sol["s_choice"]), T * S + 1)
-    bp = jax.nn.one_hot(jnp.asarray(sol["b_choice"]), S + 1)[..., :-1]
+    bp = (jnp.asarray(sol["b_choice"]) == 0).astype(jnp.float32)
     logt = ink_logt(sp, jnp.asarray(sol["s_off"]), jnp.asarray(sol["s_ang"]), bp,
-                    jnp.asarray(sol["b_off"]), jnp.asarray(sol["b_ang"]), jnp.asarray(sol["b_len"]))
+                    jnp.asarray(sol["b_off"]), jnp.asarray(sol["b_ang"]), jnp.asarray(sol["b_len"]), jnp.asarray(sol["b_str"]))
     return composite(logt, sol["base"], upto)
 
 
@@ -288,7 +291,7 @@ def marks_from(sol):
                 cols = range(ch.shape[1]) if row % 2 == 0 else reversed(range(ch.shape[1]))
                 for col in cols:
                     o = ch[row, col]
-                    if (brush and o == S) or (not brush and (o == T * S or o // S != t_idx)):
+                    if (brush and o == 1) or (not brush and (o == T * S or o // S != t_idx)):
                         continue
                     if used >= PER_DIP[tool]:
                         dip, used = dip + 1, 0
@@ -298,7 +301,7 @@ def marks_from(sol):
                         cy = (row + 0.5) * G + sol["b_off"][k, row, col, 1]
                         a, half = sol["b_ang"][k, row, col], sol["b_len"][k, row, col] / 2
                         ends = [(cx - half * np.cos(a), cy - half * np.sin(a)), (cx + half * np.cos(a), cy + half * np.sin(a))]
-                        rec = dict(mode="drag", path=[(float(x * mm), float(y * mm)) for x, y in ends], strength=STRENGTHS[o])
+                        rec = dict(mode="drag", path=[(float(x * mm), float(y * mm)) for x, y in ends], strength=float(sol["b_str"][k]))
                     else:  # lattice point (row, col) at (col*H2, row*H2): odd = cell centre, even = crossing
                         x = col * H2 + sol["s_off"][k, row, col, 0]
                         y = row * H2 + sol["s_off"][k, row, col, 1]
@@ -315,7 +318,7 @@ def write_svg(marks, ny, nx, path):
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{f(W)}mm" height="{f(H)}mm" viewBox="0 0 {f(W)} {f(H)}">',
            "<metadata>" + json.dumps({"prototype": "jax grid stamps + brush drags", "tools": "PLACEHOLDER digital footprints",
                                       "print_order": [INKS[i]["label"] for i in ORDER],
-                                      "brush_fade": "preview only: ink fades along each drag"}) + "</metadata>",
+                                      "wash": "brush drags of one ink share a group opacity, so overlaps unify"}) + "</metadata>",
            '<rect width="100%" height="100%" fill="#fff"/>', "<defs>"]
     for t, (hw, hh, r) in STAMPS.items():
         out.append(f'<rect id="tool-{t}" x="{f(-hw * GRID_MM)}" y="{f(-hh * GRID_MM)}" width="{f(2 * hw * GRID_MM)}" '
@@ -328,14 +331,17 @@ def write_svg(marks, ny, nx, path):
         ink = INKS[i]
         col = "#" + "".join(f"{c:02x}" for c in ink["rgb"])
         out.append(f'<g id="print-{k + 1:02d}-{ink["role"]}" data-ink="{ink["id"]}" data-print-order="{k + 1}" color="{col}">')
-        for m in (m for m in marks if m["order"] == k):
-            data = f'data-tool="{m["tool"]}" data-mode="{m["mode"]}" data-strength="{m["strength"]}" data-dip="{m["dip"]}" data-seq="{m["seq"]}"'
-            if m["mode"] == "drag":
+        drags = [m for m in marks if m["order"] == k and m["mode"] == "drag"]
+        if drags:  # one wet wash: strokes at full strength inside, the ink's dilution on the group
+            out.append(f'<g data-tool="wash-brush" data-strength="{drags[0]["strength"]}" opacity="{drags[0]["strength"]}">')
+            for m in drags:
                 (x0, y0), (x1, y1) = m["path"]
                 out.append(f'<path d="M {f(x0)},{f(y0)} L {f(x1)},{f(y1)}" stroke="{col}" stroke-width="{f(BRUSH["width"] * GRID_MM)}" '
-                           f'stroke-linecap="round" fill="none" opacity="{m["strength"]}" {data}/>')
-            else:
-                out.append(f'<use href="#tool-{m["tool"]}" transform="translate({f(m["x"])} {f(m["y"])}) rotate({m["angle"]:.1f})" '
+                           f'stroke-linecap="round" fill="none" data-mode="drag" data-dip="{m["dip"]}" data-seq="{m["seq"]}"/>')
+            out.append("</g>")
+        for m in (m for m in marks if m["order"] == k and m["mode"] == "dab"):
+            data = f'data-tool="{m["tool"]}" data-mode="{m["mode"]}" data-strength="{m["strength"]}" data-dip="{m["dip"]}" data-seq="{m["seq"]}"'
+            out.append(f'<use href="#tool-{m["tool"]}" transform="translate({f(m["x"])} {f(m["y"])}) rotate({m["angle"]:.1f})" '
                            f'opacity="{m["strength"]}" {data}/>')
         out.append("</g>")
     out.append("</svg>")

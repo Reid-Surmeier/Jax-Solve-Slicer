@@ -9,14 +9,14 @@ img{width:100%;height:auto;display:block;background:#fff}figure{margin:0}figcapt
 <body><main><h1 style="font-size:20px">JAX layered marks: grid, drags, stamps</h1>
 <ol>
 <li><b>Grid kept.</b> The pencil grid is measured from the reference (83 px period, 15 × 19 cells) and drawn first.</li>
-<li><b>Underlayer is dragged.</b> A 1.2-cell wash brush: per ink and cell JAX may lay one stroke (angle, length up to 3.5 cells, dilution). Ink fades along each drag as the dip runs out.</li>
+<li><b>Underlayer is dragged, and unified.</b> A 1.2-cell wash brush: per ink and cell JAX may lay one stroke (angle, length up to 3.5 cells). All drags of one ink merge into one wet wash at a single dilution, so overlapping strokes of the same colour never darken into seams. In the SVG each ink's drags share one group opacity.</li>
 <li><b>Stamps on the lattice.</b> Five rotatable square tools (L, M, S square, slab, chip) placed only on cell centres and grid crossings, as in the reference, with a tiny wobble.</li>
 <li><b>Print order</b> yellow → orange → rose → red → sepia → burgundy → green → blue → purple → royal blue → blue black → black; brush before stamps within each ink.</li>
 </ol>
 <div class="row"><figure><img src="target.png"><figcaption>Target, cropped to the grid</figcaption></figure>
-<figure><img src="brush-underlayer.png"><figcaption>Brush drags only (underlayer)</figcaption></figure>
+<figure><img src="brush-underlayer.png"><figcaption>Brush drags only: one even wash per ink</figcaption></figure>
 <figure><img src="jax-marks.png"><figcaption>JAX render: drags + stamps</figcaption></figure>
 <figure><a href="layered-marks.svg"><img src="svg-render.png"></a><figcaption>Exported SVG, rendered (click for file)</figcaption></figure></div>
 <h2 style="font-size:16px">Build in print order</h2>
 <div class="row" style="grid-template-columns:1fr 2fr"><img src="print-order.gif"><img src="print-order-strip.png"></div>
-<p style="color:var(--mute)">1,611 marks (286 drags, 1,325 stamps) · 278 dips · RMSE 0.118 (blurred 0.026) · 4 min on the RTX 4070 SUPER · tools are placeholders · watercolour rim and drag fade are preview only</p></main></body></html>
+<p style="color:var(--mute)">1,526 marks (493 drags, 1,033 stamps) · 315 dips · RMSE 0.125 (blurred 0.036) · 4 min on the RTX 4070 SUPER · tools are placeholders · stamp watercolour rim is preview only</p></main></body></html>
