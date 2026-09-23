@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS images(
   kind TEXT, depicts TEXT, subjects TEXT, palette TEXT,
   saturation REAL,                   -- 95th-percentile HSV saturation, 0..1
   artwork_only INTEGER,              -- a straight reproduction of one work, cropped to it, nothing else in frame
+  verified INTEGER,                  -- the caption-blind painting check passed (1), failed (0), not yet asked (NULL)
   keep INTEGER, why_excluded TEXT, fetched_at TEXT);
 CREATE TABLE IF NOT EXISTS rejects(image_key TEXT PRIMARY KEY, artist TEXT, reason TEXT);
 CREATE VIEW IF NOT EXISTS artworks AS SELECT * FROM images WHERE keep = 1;
@@ -77,6 +78,13 @@ photo_context: true if the photograph shows real surroundings outside the artwor
 text_overlay: true only if typeset words, dates, logos or a caption are visibly printed in the image pixels on top of or beside the work,
   as on a flyer, poster, magazine page or book cover. The published text given above never counts, and neither do letters painted into the work itself
 other_artist: true if the text or the image suggests the work is by someone other than {name} (a caption crediting another artist, a famous historical work, a page from a book about another painter)"""
+
+
+VERIFY = """Judge only the pixels of this image. Is it a reproduction (a photograph or scan) of one hand-made painting or print that fills most of the frame?
+Answer false for a photograph of a real person, place or object; a 3D render, video still or screenshot; a page of text or a document;
+a book, magazine or poster; several artworks side by side; an installation, studio or exhibition view.
+Paintings that imitate photographs or computer graphics still count as paintings.
+Return JSON: {"painting": true or false}"""
 
 
 def best_src(attrib):
@@ -291,13 +299,23 @@ def download(c):
 
 
 def describe(name, c, im):
+    return ask(PROMPT.format(name=name, text=(c.get("source_text") or "(none)")[:1500]), im, c["image_key"])
+
+
+def is_painting(im):
+    """A second, caption-blind yes/no check on every image the description kept."""
+    d, cost = ask(VERIFY, im, "verify")
+    return (None if d is None else d.get("painting") is True), cost
+
+
+def ask(prompt, im, label):
     small = im.convert("RGB")
     small.thumbnail((768, 768))
     buf = io.BytesIO()
     small.save(buf, "JPEG", quality=85)
     body = {"model": MODEL, "response_format": {"type": "json_object"}, "usage": {"include": True},
             "messages": [{"role": "user", "content": [
-                {"type": "text", "text": PROMPT.format(name=name, text=(c.get("source_text") or "(none)")[:1500])},
+                {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()}}]}]}
     for attempt in range(3):
         try:
@@ -312,7 +330,7 @@ def describe(name, c, im):
         except Exception as e:  # malformed reply or transient failure: retry, then leave undescribed
             err = e
             time.sleep(2 * (attempt + 1))
-    print(f"  describe failed {c['image_key'][:80]}: {err}", file=sys.stderr)
+    print(f"  model call failed {label[:80]}: {err}", file=sys.stderr)
     return None, 0.0
 
 
@@ -335,8 +353,21 @@ class Corpus:
         self.db = sqlite3.connect(self.out / "corpus.sqlite", timeout=300)  # one process per artist may share the file
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript(SCHEMA)
-        if "artwork_only" not in {r[1] for r in self.db.execute("PRAGMA table_info(images)")}:
-            self.db.execute("ALTER TABLE images ADD COLUMN artwork_only INTEGER")
+        columns = {r[1] for r in self.db.execute("PRAGMA table_info(images)")}
+        for column in ("artwork_only", "verified"):
+            if column not in columns:
+                self.db.execute(f"ALTER TABLE images ADD COLUMN {column} INTEGER")
+
+    def verify(self, pairs):
+        """Run the painting check on each kept (row, image) pair and demote the rows that fail it."""
+        pairs = [(r, im) for r, im in pairs if r["keep"]]
+        with ThreadPoolExecutor(self.workers) as pool:
+            answers = list(pool.map(lambda p: is_painting(p[1]), pairs))
+        for (r, _), (ok, cost) in zip(pairs, answers):
+            self.cost += cost
+            r["verified"] = None if ok is None else int(ok)
+            if ok is not True:
+                r["keep"], r["why_excluded"] = 0, "failed painting check" if ok is False else "unverified"
 
     def seen(self, key):
         return self.db.execute("SELECT 1 FROM images WHERE image_key=? UNION SELECT 1 FROM rejects WHERE image_key=?", (key, key)).fetchone()
@@ -367,27 +398,32 @@ class Corpus:
         for (c, _, facts), (d, cost) in zip(fresh, described):
             self.cost += cost
             rows.append({**c, **facts, "artist": a["slug"], "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **classified(a, {**c, **facts}, d)})
+        self.verify([(r, im) for r, (_, im, _) in zip(rows, fresh)])
         with self.db:  # one short write per batch; never hold the lock across network calls
             self.db.executemany("INSERT OR IGNORE INTO rejects VALUES (?,?,?)", rejects)
             for row in rows:
                 self.db.execute(f"INSERT OR IGNORE INTO images({','.join(row)}) VALUES ({','.join('?' * len(row))})", list(row.values()))
 
     def recheck(self, a):
-        """Describe again every stored image of this artist that predates the artwork_only rule, from its local file."""
+        """From local files: describe again the images that predate the current rules, and run the painting check on kept ones that lack it."""
         self.db.row_factory = sqlite3.Row
-        old = [dict(r) for r in self.db.execute("SELECT * FROM images WHERE artist=? AND artwork_only IS NULL", (a["slug"],))]
+        old = [dict(r) for r in self.db.execute("SELECT * FROM images WHERE artist=? AND (artwork_only IS NULL OR (keep=1 AND verified IS NULL))", (a["slug"],))]
         self.db.row_factory = None
         for i in range(0, len(old), 50):
             chunk = old[i:i + 50]
+            images = [Image.open(self.out / r["path"]) for r in chunk]
+            stale = [(r, im) for r, im in zip(chunk, images) if r["artwork_only"] is None]
             with ThreadPoolExecutor(self.workers) as pool:
-                images = [Image.open(self.out / r["path"]) for r in chunk]
-                described = list(pool.map(lambda ri: describe(a["name"], ri[0], ri[1]), zip(chunk, images)))
+                described = list(pool.map(lambda p: describe(a["name"], p[0], p[1]), stale))
+            for (r, im), (d, cost) in zip(stale, described):
+                self.cost += cost
+                r["saturation"] = saturation(im)
+                r.update(classified(a, r, d))
+            self.verify(list(zip(chunk, images)))
+            fields = ("saturation", "kind", "depicts", "palette", "subjects", "artwork_only", "title", "year", "medium", "why_excluded", "keep", "verified")
             with self.db:
-                for r, im, (d, cost) in zip(chunk, images, described):
-                    self.cost += cost
-                    r["saturation"] = saturation(im)
-                    new = {"saturation": r["saturation"], **classified(a, r, d)}
-                    self.db.execute(f"UPDATE images SET {', '.join(k + '=?' for k in new)} WHERE id=?", [*new.values(), r["id"]])
+                for r in chunk:
+                    self.db.execute(f"UPDATE images SET {', '.join(k + '=?' for k in fields)} WHERE id=?", [*(r[k] for k in fields), r["id"]])
             print(f"  {a['slug']}: rechecked {i + len(chunk)}/{len(old)}, ${self.cost:.3f}", flush=True)
 
     def run(self, a, limit):
