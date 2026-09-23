@@ -1,16 +1,22 @@
 <!doctype html>
-<!-- PROTOTYPE, throwaway: JAX layered-mark solve on the Close reference -->
+<!-- PROTOTYPE, throwaway: JAX grid-locked stamps + dragged wash underlayer on the Close reference -->
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>JAX Layered Marks</title>
 <style>:root{--bg:#fafaf7;--fg:#1a1a1a;--mute:#666}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161616;--fg:#eee;--mute:#aaa}}
-body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}main{max-width:1200px;margin:auto}
-.row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media (max-width:720px){.row{grid-template-columns:1fr}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}main{max-width:1280px;margin:auto}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media (max-width:820px){.row{grid-template-columns:1fr 1fr}}
 img{width:100%;height:auto;display:block;background:#fff}figure{margin:0}figcaption{font-size:13px;color:var(--mute)}</style></head>
-<body><main><h1 style="font-size:20px">JAX layered marks: Close reference</h1>
-<p>Six square-based tools (wash, large, medium and small squares, slab, chip), fixed size, freely rotated. JAX picks, for every placement cell and every ink, one tool (or none), a dilution, an offset and a rotation. Marks overlap their neighbours; pale washes underneath shine through the darker marks printed later. Print order is fixed: yellow → orange → rose → red → sepia → burgundy → green → blue → purple → royal blue → blue black → black. Tools are placeholders.</p>
-<div class="row"><figure><img src="target.png"><figcaption>Target</figcaption></figure>
-<figure><img src="jax-marks.png"><figcaption>JAX render of the chosen marks</figcaption></figure>
-<figure><a href="layered-marks.svg"><img src="svg-render.png"></a><figcaption>Exported SVG, rendered (click for the file)</figcaption></figure></div>
-<h2 style="font-size:16px">Tools</h2><img src="tools.png" style="max-width:720px"><h2 style="font-size:16px">Build in print order</h2>
+<body><main><h1 style="font-size:20px">JAX layered marks: grid, drags, stamps</h1>
+<ol>
+<li><b>Grid kept.</b> The pencil grid is measured from the reference (83 px period, 15 × 19 cells) and drawn first.</li>
+<li><b>Underlayer is dragged.</b> A 1.2-cell wash brush: per ink and cell JAX may lay one stroke (angle, length up to 3.5 cells, dilution). Ink fades along each drag as the dip runs out.</li>
+<li><b>Stamps on the lattice.</b> Five rotatable square tools (L, M, S square, slab, chip) placed only on cell centres and grid crossings, as in the reference, with a tiny wobble.</li>
+<li><b>Print order</b> yellow → orange → rose → red → sepia → burgundy → green → blue → purple → royal blue → blue black → black; brush before stamps within each ink.</li>
+</ol>
+<div class="row"><figure><img src="target.png"><figcaption>Target, cropped to the grid</figcaption></figure>
+<figure><img src="brush-underlayer.png"><figcaption>Brush drags only (underlayer)</figcaption></figure>
+<figure><img src="jax-marks.png"><figcaption>JAX render: drags + stamps</figcaption></figure>
+<figure><a href="layered-marks.svg"><img src="svg-render.png"></a><figcaption>Exported SVG, rendered (click for file)</figcaption></figure></div>
+<h2 style="font-size:16px">Build in print order</h2>
 <div class="row" style="grid-template-columns:1fr 2fr"><img src="print-order.gif"><img src="print-order-strip.png"></div>
-<p style="color:var(--mute)">3,054 marks · 396 dips · RMSE 0.097 (blurred 0.020) · 3.5 min on the RTX 4070 SUPER · darker watercolour rim is preview only</p></main></body></html>
+<p style="color:var(--mute)">1,611 marks (286 drags, 1,325 stamps) · 278 dips · RMSE 0.118 (blurred 0.026) · 4 min on the RTX 4070 SUPER · tools are placeholders · watercolour rim and drag fade are preview only</p></main></body></html>

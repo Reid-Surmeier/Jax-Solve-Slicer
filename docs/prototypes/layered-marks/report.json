@@ -1,87 +1,83 @@
 {
-  "rmse": 0.097,
-  "blurred_rmse": 0.0199,
-  "marks": 3054,
-  "dips": 396,
-  "marks_per_cell": {
-    "0": 62,
-    "1": 200,
-    "2": 285,
-    "3": 290,
-    "4": 163,
-    "5": 90,
-    "6": 40,
-    "7": 8,
-    "8": 2
+  "grid": {
+    "period_px": [
+      83.13,
+      82.35
+    ],
+    "phase_px": [
+      12.5,
+      64.0
+    ],
+    "cells": [
+      15,
+      19
+    ]
   },
+  "rmse": 0.1182,
+  "blurred_rmse": 0.0258,
+  "marks": 1611,
+  "dips": 278,
+  "drags": 286,
+  "drag_mm": 5321.7,
   "marks_per_tool": {
-    "wash-XL": 447,
-    "square-L": 461,
-    "square-M": 571,
-    "square-S": 571,
-    "slab": 552,
-    "chip": 452
-  },
-  "marks_per_strength": {
-    "0.25": 1451,
-    "0.5": 690,
-    "0.85": 913
+    "wash-brush": 286,
+    "square-L": 387,
+    "square-M": 295,
+    "square-S": 198,
+    "slab": 331,
+    "chip": 114
   },
   "print_order": [
     {
       "ink": "XSDK05#3 yellow",
-      "marks": 469
+      "marks": 347
     },
     {
       "ink": "XSDK05#5 orange",
-      "marks": 408
+      "marks": 215
     },
     {
       "ink": "XSDK05#21 rose",
-      "marks": 304
+      "marks": 220
     },
     {
       "ink": "XSDK05#19 red",
-      "marks": 281
+      "marks": 119
     },
     {
       "ink": "XSDK05#117 sepia",
-      "marks": 69
+      "marks": 47
     },
     {
       "ink": "XSDK05#22 burgundy",
-      "marks": 77
+      "marks": 34
     },
     {
       "ink": "XSDK05#32 fresh green",
-      "marks": 163
+      "marks": 73
     },
     {
       "ink": "XSDK05#36 blue",
-      "marks": 173
+      "marks": 80
     },
     {
       "ink": "XSDK05#24 purple",
-      "marks": 329
+      "marks": 197
     },
     {
       "ink": "XSDK05#138 royal blue",
-      "marks": 93
+      "marks": 40
     },
     {
       "ink": "XSDK05#243 blue black",
-      "marks": 261
+      "marks": 97
     },
     {
       "ink": "XSDK05#49 black",
-      "marks": 427
+      "marks": 142
     }
   ],
   "jax": "0.10.0",
   "backend": "gpu",
-  "steps": 1500,
-  "grid": [
-    30,
-    38
-  ]
+  "steps": 1500
 }
