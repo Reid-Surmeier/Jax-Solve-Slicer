@@ -227,7 +227,8 @@ class Corpus:
     def __init__(self, out, workers):
         self.out, self.workers, self.cost = Path(out), workers, 0.0
         self.out.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(self.out / "corpus.sqlite")
+        self.db = sqlite3.connect(self.out / "corpus.sqlite", timeout=300)  # one process per artist may share the file
+        self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript(SCHEMA)
 
     def seen(self, key):
