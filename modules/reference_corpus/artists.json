@@ -1,12 +1,12 @@
 [
   {"slug": "sangram-majumdar", "name": "Sangram Majumdar", "instagram": "sangram_majumdar", "artsy": "sangram-majumdar",
-   "sites": [{"url": "https://sangrammajumdar.com/"}]},
+   "sites": [{"url": "https://sangrammajumdar.com/", "stealth": true}]},
   {"slug": "sainer", "name": "Sainer (Przemek Blejzyk, Etam Cru)", "instagram": "sainer_etam", "artsy": "sainer",
    "sites": [{"url": "https://www.sainer.org/"}]},
   {"slug": "emma-webster", "name": "Emma Webster", "instagram": "emma_webstah", "artsy": "emma-webster",
-   "sites": [{"url": "https://emmawebster.com/"}, {"url": "https://www.perrotin.com/en/artists/emma-webster", "match": "webster"}]},
+   "sites": [{"url": "https://emmawebster.com/", "stealth": true}, {"url": "https://www.perrotin.com/en/artists/emma-webster", "match": "webster", "stealth": true}]},
   {"slug": "matt-bollinger", "name": "Matt Bollinger", "instagram": "mattlbollinger", "artsy": "matt-bollinger",
-   "sites": [{"url": "https://mattbollinger.com/"}]},
+   "sites": [{"url": "https://mattbollinger.com/", "stealth": true}]},
   {"slug": "mike-lee", "name": "Mike Lee", "instagram": "immikelee", "artsy": "mike-lee",
    "note": "Grayscale figurative painter, b. 1983, New York (Jason Haam, Half Gallery).",
    "sites": [{"url": "https://www.jasonhaam.com/artists/69-mike-lee/", "match": "mike-lee"}]},
@@ -26,7 +26,7 @@
    "note": "Identified from an owner-supplied image by Google Lens: Root Five Nude, 1974-75 (Hazlitt Holland-Hibbert).",
    "sites": [{"url": "https://artuk.org/discover/artworks/view_as/grid/search/makers:euan-uglow-19322000", "match": "uglow", "stealth": true},
              {"url": "https://artcollection.dcms.gov.uk/person/uglow-euan/", "match": "uglow"},
-             {"url": "https://www.tate.org.uk/art/artists/euan-uglow-2091", "match": "uglow"}]},
+             {"url": "https://www.tate.org.uk/art/artists/euan-uglow-2084", "match": "uglow"}]},
   {"slug": "makiko-kudo", "name": "Makiko Kudo", "instagram": "kudo_makiko", "artsy": "makiko-kudo",
    "sites": [{"url": "https://tomiokoyamagallery.com/en/artists/makiko-kudo/", "match": "kudo"}]}
 ]
