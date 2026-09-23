@@ -234,24 +234,21 @@ class Corpus:
     def seen(self, key):
         return self.db.execute("SELECT 1 FROM images WHERE image_key=? UNION SELECT 1 FROM rejects WHERE image_key=?", (key, key)).fetchone()
 
-    def reject(self, artist, key, reason):
-        self.db.execute("INSERT OR IGNORE INTO rejects VALUES (?,?,?)", (key, artist, reason))
-
     def kept(self, artist):
         return self.db.execute("SELECT count(*) FROM images WHERE artist=? AND keep=1", (artist,)).fetchone()[0]
 
     def flush(self, a, batch, known):
         with ThreadPoolExecutor(self.workers) as pool:
             fetched = list(pool.map(download, batch))
-        fresh = []
+        fresh, rejects, rows = [], [], []
         for c, got, why in fetched:
             if why:
-                self.reject(a["slug"], c["image_key"], why)
+                rejects.append((c["image_key"], a["slug"], why))
                 continue
             body, im = got
             sha, h = hashlib.sha256(body).hexdigest(), dhash(im)
             if is_dup(h, known):
-                self.reject(a["slug"], c["image_key"], "duplicate")
+                rejects.append((c["image_key"], a["slug"], "duplicate"))
                 continue
             known.append(h)
             path = self.out / "images" / a["slug"] / f"{sha[:16]}.{'jpg' if im.format == 'JPEG' else (im.format or 'img').lower()}"
@@ -270,12 +267,15 @@ class Corpus:
                    "title": c.get("title") or d.get("title"), "year": c.get("year") or d.get("year"), "medium": c.get("medium") or d.get("medium")}
             row["why_excluded"] = exclusion(row["kind"], row["saturation"], row["year"], a.get("only", {})) if d else "undescribed"
             row["keep"] = int(row["why_excluded"] is None)
-            cols = ",".join(row)
-            self.db.execute(f"INSERT OR IGNORE INTO images({cols}) VALUES ({','.join('?' * len(row))})", list(row.values()))
-        self.db.commit()
+            rows.append(row)
+        with self.db:  # one short write per batch; never hold the lock across network calls
+            self.db.executemany("INSERT OR IGNORE INTO rejects VALUES (?,?,?)", rejects)
+            for row in rows:
+                self.db.execute(f"INSERT OR IGNORE INTO images({','.join(row)}) VALUES ({','.join('?' * len(row))})", list(row.values()))
 
     def run(self, a, limit):
-        self.db.execute("INSERT OR REPLACE INTO artists VALUES (?,?,?)", (a["slug"], a["name"], a.get("note")))
+        with self.db:
+            self.db.execute("INSERT OR REPLACE INTO artists VALUES (?,?,?)", (a["slug"], a["name"], a.get("note")))
         known = [int(h, 16) for (h,) in self.db.execute("SELECT dhash FROM images WHERE artist=?", (a["slug"],))]
         sources = ([artsy(a["artsy"])] if a.get("artsy") else []) + [site(s) for s in a.get("sites", [])] + ([instagram(a["instagram"])] if a.get("instagram") else [])
         batch, size = [], self.workers * 3
