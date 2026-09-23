@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- PROTOTYPE, throwaway: five tool-library style recipes on the same JAX alpha plates, switch with ?variant= -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tool Style Recipes</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1a1a1a;--mute:#666;--bar:#1a1a1a;--barfg:#fff;--line:#ddd}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161616;--fg:#eee;--mute:#aaa;--bar:#eee;--barfg:#111;--line:#333}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;padding:16px 16px 96px}
+main{max-width:1200px;margin:auto}
+h1{font-size:20px;margin:0 0 4px}.mute{color:var(--mute)}
+.pair{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:12px}
+@media (max-width:720px){.pair{grid-template-columns:1fr}}
+figure{margin:0}img{width:100%;height:auto;display:block;border:1px solid var(--line);background:#fff}
+figcaption{font-size:13px;color:var(--mute);margin-top:4px}
+table{border-collapse:collapse;font-size:14px;margin-top:8px;width:100%}td{padding:3px 8px 3px 0;border-bottom:1px solid var(--line)}
+.bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;background:var(--bar);padding:6px;border-radius:999px;box-shadow:0 4px 18px #0004;max-width:calc(100vw - 32px);overflow-x:auto}
+.bar a{color:var(--barfg);text-decoration:none;padding:6px 12px;border-radius:999px;white-space:nowrap;font-size:14px}
+.bar a[aria-current]{background:var(--barfg);color:var(--bar)}
+</style></head><body><main>
+<h1 id="title"></h1>
+<p id="what"></p>
+<div class="pair">
+  <figure><a id="svglink"><img id="main" alt=""></a><figcaption id="cap"></figcaption></figure>
+  <div>
+    <figure><img src="jax-composite.png" alt="JAX alpha composite"><figcaption>Same input for every variant: the JAX alpha composite (12 inks)</figcaption></figure>
+    <table id="stats"></table>
+    <p class="mute" style="font-size:13px">"Reads as image" is a blurred difference to the JAX composite. It's a sanity check, not the goal; lower means closer.</p>
+  </div>
+</div>
+<h2 style="font-size:16px;margin-top:24px">Placeholder tool library</h2>
+<img src="tools.png" alt="Seven placeholder tool footprints" style="max-width:900px">
+<p class="mute">Digital stand-ins. Real footprints come from scanning one dip of each of your tools; density and prints-per-dip come from the same test sheet.</p>
+</main>
+<nav class="bar" id="bar"></nav>
+<script>
+const V = {
+  "0": {name:"Now: coverage rectangles", img:"legacy-current.png", key:"legacy-coverage-svg",
+        what:"What the pipeline makes today: every ink as 1–3 thin jittered rectangles per 5 px tile, one shape, no tools, no dips."},
+  "A": {name:"A · Close grid", img:"A-close.png", svg:"A-close.svg", key:"A-close",
+        what:"A 45° diamond grid. In each cell, the three strongest inks stack: big sponge underneath, ring on top, small sponge dot in the centre. Chuck Close's method, with the colour choices made by the alpha plates."},
+  "B": {name:"B · Drags", img:"B-drags.png", svg:"B-drags.svg", key:"B-drags",
+        what:"Every ink becomes long diagonal drags. Light inks use a 12 mm flat brush, dark inks a 1.6 mm liner. A drag starts where the ink gets strong, stops where it fades, or when the dip runs out."},
+  "C": {name:"C · Scatter dabs", img:"C-scatter.png", svg:"C-scatter.svg", key:"C-scatter",
+        what:"Every ink becomes stamped dabs clustered where that ink is strong. Dark inks use a leaf stamp at a set angle, light inks a big sponge."},
+  "D": {name:"D · Per-colour recipe", img:"D-mixed.png", svg:"D-mixed.svg", key:"D-mixed",
+        what:"Your idea: each ink gets its own tool and gesture. Yellow and orange are flat-brush drags, reds are leaf stamps, pinks, greens and browns are sponges, blacks and blues are liner drags."},
+  "E": {name:"E · Contour sponge", img:"E-contour.png", svg:"E-contour.svg", key:"E-contour",
+        what:"After Harold Cohen's AARON machine: the plates are smoothed into big shapes, black inks draw each shape's outline, and every other ink fills its shapes with a round sponge in rings that follow the edge inward. The path bends with the shape instead of running on a grid."}
+};
+const v = V[new URLSearchParams(location.search).get("variant")] ? new URLSearchParams(location.search).get("variant") : "A";
+const cur = V[v];
+document.getElementById("title").textContent = cur.name;
+document.getElementById("what").textContent = cur.what;
+document.getElementById("main").src = cur.img;
+document.getElementById("main").alt = cur.name;
+if (cur.svg) { document.getElementById("svglink").href = cur.svg; document.getElementById("cap").textContent = "Preview raster of the exported SVG's marks. Click to open the real SVG (every mark carries its tool, dip and order)."; }
+else document.getElementById("cap").textContent = "Current exported SVG, rasterised";
+document.getElementById("bar").innerHTML = Object.entries(V).map(([k, x]) =>
+  `<a href="?variant=${k}" ${k === v ? 'aria-current="page"' : ""}>${x.name}</a>`).join("");
+fetch("report.json").then(r => r.json()).then(r => {
+  const s = r[cur.key]; if (!s) return;
+  const rows = [["Marks", s.marks.toLocaleString()]];
+  if (s.dips !== undefined) rows.push(["Ink dips", s.dips.toLocaleString()], ["Drag length", s.drag_m + " m"],
+    ["Marks per tool", Object.entries(s.marks_per_tool).map(([t, n]) => `${t} ${n.toLocaleString()}`).join(", ")]);
+  rows.push(["Reads as image", s.blurred_rmse_vs_jax]);
+  document.getElementById("stats").innerHTML = rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
+}).catch(() => {});
+</script></body></html>

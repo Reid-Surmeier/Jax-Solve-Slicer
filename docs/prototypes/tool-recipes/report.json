@@ -1,0 +1,60 @@
+{
+  "legacy-coverage-svg": {
+    "blurred_rmse_vs_jax": 0.0961,
+    "marks": 64754
+  },
+  "A-close": {
+    "marks": 11446,
+    "dips": 1220,
+    "drag_m": 0.0,
+    "marks_per_tool": {
+      "ring-7": 3816,
+      "sponge-L": 4438,
+      "sponge-S": 3192
+    },
+    "blurred_rmse_vs_jax": 0.0967
+  },
+  "B-drags": {
+    "marks": 2514,
+    "dips": 704,
+    "drag_m": 139.6,
+    "marks_per_tool": {
+      "flat-12": 327,
+      "liner-2": 2187
+    },
+    "blurred_rmse_vs_jax": 0.1902
+  },
+  "C-scatter": {
+    "marks": 21466,
+    "dips": 2203,
+    "drag_m": 0.0,
+    "marks_per_tool": {
+      "leaf-6": 19490,
+      "sponge-L": 1976
+    },
+    "blurred_rmse_vs_jax": 0.1601
+  },
+  "D-mixed": {
+    "marks": 8216,
+    "dips": 985,
+    "drag_m": 61.5,
+    "marks_per_tool": {
+      "flat-12": 152,
+      "leaf-6": 1854,
+      "liner-2": 971,
+      "sponge-L": 1240,
+      "sponge-S": 3999
+    },
+    "blurred_rmse_vs_jax": 0.194
+  },
+  "E-contour": {
+    "marks": 897,
+    "dips": 541,
+    "drag_m": 81.6,
+    "marks_per_tool": {
+      "liner-2": 158,
+      "round-8": 739
+    },
+    "blurred_rmse_vs_jax": 0.1786
+  }
+}
