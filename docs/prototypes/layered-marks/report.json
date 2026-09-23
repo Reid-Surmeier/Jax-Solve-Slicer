@@ -1,88 +1,87 @@
 {
-  "rmse": 0.2075,
-  "blurred_rmse": 0.0488,
-  "marks": 1547,
-  "dips": 237,
+  "rmse": 0.097,
+  "blurred_rmse": 0.0199,
+  "marks": 3054,
+  "dips": 396,
   "marks_per_cell": {
-    "0": 6,
-    "1": 67,
-    "2": 107,
-    "3": 140,
-    "4": 102,
-    "5": 47,
-    "6": 20,
-    "7": 6,
-    "8": 4,
-    "9": 1
+    "0": 62,
+    "1": 200,
+    "2": 285,
+    "3": 290,
+    "4": 163,
+    "5": 90,
+    "6": 40,
+    "7": 8,
+    "8": 2
   },
   "marks_per_tool": {
-    "sponge-L": 463,
-    "sponge-M": 215,
-    "ring": 328,
-    "diamond": 237,
-    "square": 179,
-    "dot": 125
+    "wash-XL": 447,
+    "square-L": 461,
+    "square-M": 571,
+    "square-S": 571,
+    "slab": 552,
+    "chip": 452
   },
   "marks_per_strength": {
-    "0.3": 811,
-    "0.6": 178,
-    "0.9": 558
+    "0.25": 1451,
+    "0.5": 690,
+    "0.85": 913
   },
   "print_order": [
     {
       "ink": "XSDK05#3 yellow",
-      "marks": 285
+      "marks": 469
     },
     {
       "ink": "XSDK05#5 orange",
-      "marks": 266
+      "marks": 408
     },
     {
       "ink": "XSDK05#21 rose",
-      "marks": 186
+      "marks": 304
     },
     {
       "ink": "XSDK05#19 red",
-      "marks": 159
+      "marks": 281
     },
     {
       "ink": "XSDK05#117 sepia",
-      "marks": 46
+      "marks": 69
     },
     {
       "ink": "XSDK05#22 burgundy",
-      "marks": 38
+      "marks": 77
     },
     {
       "ink": "XSDK05#32 fresh green",
-      "marks": 81
+      "marks": 163
     },
     {
       "ink": "XSDK05#36 blue",
-      "marks": 73
+      "marks": 173
     },
     {
       "ink": "XSDK05#24 purple",
-      "marks": 195
+      "marks": 329
     },
     {
       "ink": "XSDK05#138 royal blue",
-      "marks": 17
+      "marks": 93
     },
     {
       "ink": "XSDK05#243 blue black",
-      "marks": 50
+      "marks": 261
     },
     {
       "ink": "XSDK05#49 black",
-      "marks": 151
+      "marks": 427
     }
   ],
   "jax": "0.10.0",
   "backend": "gpu",
-  "steps": 1200,
+  "steps": 1500,
   "grid": [
-    20,
-    25
+    30,
+    38
   ]
 }

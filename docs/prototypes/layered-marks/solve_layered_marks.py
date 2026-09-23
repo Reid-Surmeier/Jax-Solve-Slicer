@@ -1,69 +1,48 @@
-"""PROTOTYPE, throwaway: JAX solves layered tool marks directly against an image.
+"""PROTOTYPE, throwaway: JAX solves layered, rotated square-tool marks directly against an image.
 
-The question: can JAX choose, for every grid cell and every ink, which fixed tool mark (or none) and
-which dilution to print, so that the *overlaps* of transparent marks make the image's mixtures?
-Print order is fixed: warm/light inks first, darker next, black and cold tones last. The composite is
-the legacy over-model (plate_solver/overprint.py), applied mark layer by mark layer in that order.
-Tools are digital PLACEHOLDERS (fixed shapes, never scaled); dilutions stand in for ink cups.
+For every placement cell and every ink, JAX chooses one of 6 fixed square-based tools (or none), a
+dilution, an offset inside the cell and a rotation. Transparent marks overlap their neighbours, so
+pale washes underneath shine through the darker marks printed later. Print order is fixed: warm and
+light inks first, darker next, black and cold tones last (legacy over-model, one ink at a time).
+Tools are digital PLACEHOLDERS (fixed size, never scaled). The darker watercolour rim is a preview
+of ink pooling, not part of the toolpath.
 
-Run with a Python that has jax==0.10.0 (the version in the 2026-09-20 receipt):
-  python solve_layered_marks.py target.png
+Run on the GPU (project .venv has jax[cuda12]==0.10.0):
+  .venv/bin/python solve_layered_marks.py close-reference.png
 """
 import json
 import sys
+from functools import partial
 from pathlib import Path
 
 import jax
 import jax.numpy as jnp
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 HERE = Path(__file__).parent
 INKS = json.loads((HERE.parents[1] / "reproduction/2026-09-20/alpha/metadata.json").read_text())["inkset"]["inks"]
-CELL = 16            # solve raster px per grid cell
-KS = 31              # tool kernel px; marks can spill about one cell into neighbours
-NX = 20              # grid columns (the reference drawing has about 20)
-CELL_MM = 12.0       # physical cell size for the SVG
-STRENGTHS = (0.3, 0.6, 0.9)  # light wash / medium / full ink cups
-STEPS, SPARSITY, SEED = 1200, 0.002, 0
+CELL = 16            # solve px per placement cell
+NX = 30              # placement cells across (about 2 per pencil-grid square of the reference)
+REACH = 2            # a mark may cover this many cells either side of its own
+CELL_MM = 7.0        # physical placement pitch for the SVG
+STRENGTHS = (0.25, 0.5, 0.85)  # light wash / medium / full ink cups
+STEPS, SPARSITY, SEED = 1500, 0.0015, 0
 
-# ---- tools: fixed footprints in cell units, rasterised once ----
-TOOL_SHAPES = {
-    "sponge-L": ("blob", 0.62), "sponge-M": ("blob", 0.42), "ring": ("ring", (0.46, 0.25)),
-    "diamond": ("diamond", 0.55), "square": ("square", 0.30), "dot": ("dot", 0.17),
+# Six square-based tools, in cell units: half width, half height, corner radius. All rotate freely.
+TOOLS = {
+    "wash-XL": (1.00, 1.00, 0.40),   # pale underlayer washes
+    "square-L": (0.75, 0.75, 0.22),
+    "square-M": (0.52, 0.52, 0.14),
+    "square-S": (0.34, 0.34, 0.09),
+    "slab": (0.70, 0.36, 0.12),      # rectangular mark
+    "chip": (0.18, 0.18, 0.04),      # small dark accents
 }
-PER_DIP = {"sponge-L": 6, "sponge-M": 8, "ring": 8, "diamond": 8, "square": 10, "dot": 14}
+PER_DIP = {"wash-XL": 5, "square-L": 7, "square-M": 9, "square-S": 12, "slab": 8, "chip": 16}
+NAMES = list(TOOLS)
+GEOM = jnp.asarray([TOOLS[t] for t in NAMES]) * CELL  # (T,3) px
 
 
-def tool_outline(kind, size, n=40):
-    t = np.linspace(0, 2 * np.pi, n, endpoint=False)
-    if kind == "blob":
-        wob = 1 + 0.12 * np.sin(3 * t + 1) + 0.07 * np.sin(5 * t)
-        return [np.c_[np.cos(t), np.sin(t)] * size * wob[:, None]]
-    if kind == "ring":
-        return [np.c_[np.cos(t), np.sin(t)] * size[0], np.c_[np.cos(t), np.sin(t)] * size[1]]
-    if kind == "dot":
-        return [np.c_[np.cos(t), np.sin(t)] * size]
-    s = size
-    sq = np.array([[-s, -s], [s, -s], [s, s], [-s, s]])
-    return [sq @ np.array([[0.7071, -0.7071], [0.7071, 0.7071]]) if kind == "diamond" else sq]
-
-
-def tool_kernel(rings, ss=4):
-    big = KS * ss
-    im = Image.new("L", (big, big), 0)
-    d = ImageDraw.Draw(im)
-    for k, ring in enumerate(rings):
-        d.polygon([tuple(v) for v in ring * CELL * ss + big / 2], fill=0 if k else 255)
-    return np.asarray(im.resize((KS, KS), Image.LANCZOS).filter(ImageFilter.GaussianBlur(0.6)), np.float32) / 255
-
-
-TOOLS = list(TOOL_SHAPES)
-OUTLINES = {t: tool_outline(*TOOL_SHAPES[t]) for t in TOOLS}
-KERNELS = jnp.asarray(np.stack([tool_kernel(OUTLINES[t]) for t in TOOLS])[:, None])  # (T,1,KS,KS)
-
-
-# ---- print order: warm/light first, darker next, black and cold tones last ----
 def lum(rgb):
     r, g, b = (v / 255 for v in rgb)
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -74,9 +53,11 @@ def cold(rgb):
 
 
 ORDER = sorted(range(len(INKS)), key=lambda i: (cold(INKS[i]["rgb"]), -lum(INKS[i]["rgb"])))
-INK_RGB = jnp.asarray([np.array(INKS[i]["rgb"]) / 255 for i in ORDER], jnp.float32)  # print order
-I, T, S = len(ORDER), len(TOOLS), len(STRENGTHS)
-LOG_KEEP = jnp.log1p(-jnp.asarray(STRENGTHS))  # per-strength log transmittance of a full-cover mark
+INK_RGB = jnp.asarray([np.array(INKS[i]["rgb"]) / 255 for i in ORDER], jnp.float32)
+I, T, S = len(ORDER), len(NAMES), len(STRENGTHS)
+P = (2 * REACH + 1) * CELL
+_u = (jnp.arange(P) - P / 2 + 0.5)
+PY, PX = jnp.meshgrid(_u, _u, indexing="ij")  # patch pixel coords relative to the cell centre
 
 
 def load_target(path):
@@ -87,22 +68,49 @@ def load_target(path):
     return np.asarray(im.resize((NX * CELL, ny * CELL), Image.LANCZOS), np.float32) / 255
 
 
-def render(probs, upto=None):
-    """probs (I,NY,NX,T*S+1) in print order -> RGB (H,W,3); per-ink coverage then legacy over-model."""
-    marks = probs[..., :-1].reshape(probs.shape[:3] + (T, S))
-    depth = (marks * LOG_KEEP).sum(-1)                        # (I,NY,NX,T) log transmittance at centre
-    ny, nx = depth.shape[1:3]
-    grid = jnp.zeros((I, T, ny * CELL, nx * CELL)).at[:, :, CELL // 2::CELL, CELL // 2::CELL].set(depth.transpose(0, 3, 1, 2))
-    spread = jax.lax.conv_general_dilated(grid, KERNELS, (1, 1), "SAME", feature_group_count=T,
-                                          dimension_numbers=("NCHW", "OIHW", "NCHW"))
-    alpha = 1 - jnp.exp(spread.sum(1))                        # (I,H,W) coverage of each ink
+def footprints(off, ang, geom=GEOM):
+    """Soft alpha of every tool for every (ink, cell): (I,NY,NX,T,P,P). Rounded-box SDF, darker rim."""
+    c, s = jnp.cos(ang)[..., None, None], jnp.sin(ang)[..., None, None]
+    px, py = PX - off[..., 0, None, None], PY - off[..., 1, None, None]
+    qx, qy = c * px + s * py, -s * px + c * py
+    hw, hh, r = (geom[:, k][:, None, None] for k in range(3))
+    dx = jnp.abs(qx[..., None, :, :]) - (hw - r)
+    dy = jnp.abs(qy[..., None, :, :]) - (hh - r)
+    sdf = jnp.sqrt(jnp.maximum(dx, 0) ** 2 + jnp.maximum(dy, 0) ** 2 + 1e-6) + jnp.minimum(jnp.maximum(dx, dy), 0) - r
+    body = jax.nn.sigmoid(-sdf / 0.35)
+    rim = body * jnp.exp(jnp.minimum(sdf, 0) / (0.08 * CELL))
+    return jnp.clip(0.72 * body + 0.4 * rim, 0, 1)
+
+
+def overlap_add(patches, ny, nx):
+    """(I,NY,NX,P,P) patches centred on their cells -> (I,H,W) canvas."""
+    k = 2 * REACH + 1
+    blocks = patches.reshape(I, ny, nx, k, CELL, k, CELL)
+    canvas = jnp.zeros((I, ny + 2 * REACH, nx + 2 * REACH, CELL, CELL))
+    for dy in range(k):
+        for dx in range(k):
+            canvas = canvas.at[:, dy:dy + ny, dx:dx + nx].add(blocks[:, :, :, dy, :, dx, :])
+    canvas = canvas[:, REACH:REACH + ny, REACH:REACH + nx]
+    return canvas.transpose(0, 1, 3, 2, 4).reshape(I, ny * CELL, nx * CELL)
+
+
+def render(probs, off, ang, upto=None):
+    ny, nx = probs.shape[1:3]
+    choice = probs[..., :-1].reshape(probs.shape[:3] + (T, S))
+    # log transmittance: sum over tool/strength options of p * log(1 - strength * footprint), one tool at a time
+    @partial(jax.checkpoint, static_argnums=(0,))
+    def tool_logt(t):
+        fp = footprints(off, ang, GEOM[t:t + 1])[..., 0, :, :]              # (I,NY,NX,P,P)
+        return sum(choice[..., t, k, None, None] * jnp.log1p(-STRENGTHS[k] * fp * 0.999) for k in range(S))
+    logt = sum(tool_logt(t) for t in range(T))
+    alpha = 1 - jnp.exp(overlap_add(logt, ny, nx))                           # (I,H,W)
     out = jnp.ones(alpha.shape[1:] + (3,))
     for i in range(I if upto is None else upto):
         out = out * (1 - alpha[i, ..., None]) + INK_RGB[i] * alpha[i, ..., None]
     return out
 
 
-def blur(img, sigma=CELL / 2):
+def blur(img, sigma=CELL):
     r = int(2 * sigma)
     k = jnp.exp(-0.5 * (jnp.arange(-r, r + 1) / sigma) ** 2)
     k = k / k.sum()
@@ -113,38 +121,56 @@ def blur(img, sigma=CELL / 2):
     return x[:, 0].transpose(1, 2, 0)
 
 
+def unpack(params):
+    lg, u, ang = params
+    return lg, 0.5 * CELL * jnp.tanh(u), ang
+
+
 def solve(target):
     ny = target.shape[0] // CELL
     tgt, tgt_b = jnp.asarray(target), blur(jnp.asarray(target))
-    key = jax.random.PRNGKey(SEED)
-    logits = 0.01 * jax.random.normal(key, (I, ny, NX, T * S + 1))
-    logits = logits.at[..., -1].set(1.0)  # start mostly empty
+    k1, k2, k3 = jax.random.split(jax.random.PRNGKey(SEED), 3)
+    params = (0.01 * jax.random.normal(k1, (I, ny, NX, T * S + 1)).at[..., -1].set(1.0),
+              jax.random.uniform(k3, (I, ny, NX, 2), minval=-1.2, maxval=1.2),  # off-centre: no nesting
+              jax.random.uniform(k2, (I, ny, NX), minval=0, maxval=jnp.pi / 2))
 
-    def loss(lg, tau, hard):
-        p = jax.nn.softmax(lg / tau, -1)
-        # second half: straight-through, the render sees the real (one tool or none) choice
-        p = jnp.where(hard, jax.nn.one_hot(jnp.argmax(lg, -1), p.shape[-1]) + p - jax.lax.stop_gradient(p), p)
-        img = render(p)
-        fit = jnp.mean((img - tgt) ** 2) + 2.0 * jnp.mean((blur(img) - tgt_b) ** 2)
+    def loss(params, key, noise):
+        lg, off, ang = unpack(params)
+        # Gumbel straight-through: the render always sees real marks (one tool or none), noise explores
+        z = lg + noise * jax.random.gumbel(key, lg.shape)
+        soft = jax.nn.softmax(z / 0.5, -1)
+        p = jax.nn.one_hot(jnp.argmax(z, -1), lg.shape[-1]) + soft - jax.lax.stop_gradient(soft)
+        img = render(p, off, ang)
+        fit = jnp.mean((img - tgt) ** 2) + jnp.mean((blur(img) - tgt_b) ** 2)
         return fit + SPARSITY * jnp.mean(1 - p[..., -1]) * I
 
     grad = jax.jit(jax.value_and_grad(loss))
-    half = STEPS // 2
-    m = v = jnp.zeros_like(logits)
+    score = jax.jit(loss)
+    best = (float("inf"), params)
+    m = jax.tree_util.tree_map(jnp.zeros_like, params)
+    v = jax.tree_util.tree_map(jnp.zeros_like, params)
     for step in range(STEPS):  # hand-written Adam, as in the legacy solve
-        tau = float(0.12 ** (min(step, half) / half))
-        val, g = grad(logits, tau, step >= half)
-        m, v = 0.9 * m + 0.1 * g, 0.999 * v + 0.001 * g * g
-        logits = logits - 0.08 * (m / (1 - 0.9 ** (step + 1))) / (jnp.sqrt(v / (1 - 0.999 ** (step + 1))) + 1e-8)
-        if step % 150 == 0 or step == STEPS - 1:
-            print(f"step {step} tau {tau:.3f} loss {float(val):.5f}", flush=True)
-    return np.asarray(jnp.argmax(logits, -1))  # hard choice per ink per cell
+        lrs = (0.05, 0.05, 0.03)
+        noise = float(0.6 * (0.02 / 0.6) ** (step / (STEPS - 1)))
+        val, g = grad(params, jax.random.PRNGKey(10_000 + step), noise)
+        m = jax.tree_util.tree_map(lambda a, b: 0.9 * a + 0.1 * b, m, g)
+        v = jax.tree_util.tree_map(lambda a, b: 0.999 * a + 0.001 * b * b, v, g)
+        params = tuple(p - lr * (mm / (1 - 0.9 ** (step + 1))) / (jnp.sqrt(vv / (1 - 0.999 ** (step + 1))) + 1e-8)
+                       for p, mm, vv, lr in zip(params, m, v, lrs))
+        if step % 50 == 0 or step == STEPS - 1:  # keep the best noise-free set of real marks
+            clean = float(score(params, jax.random.PRNGKey(0), 0.0))
+            if clean < best[0]:
+                best = (clean, params)
+        if step % 250 == 0 or step == STEPS - 1:
+            print(f"step {step} noise {noise:.3f} loss {float(val):.5f} best {best[0]:.5f}", flush=True)
+    lg, off, ang = unpack(best[1])
+    return np.asarray(jnp.argmax(lg, -1)), np.asarray(off), np.asarray(ang)
 
 
-def marks_from_choice(choice):
+def marks_from(choice, off, ang):
     marks, dip, seq = [], 0, 0
-    for k, i in enumerate(ORDER):             # print order
-        for t_idx, tool in enumerate(TOOLS):  # one tool at a time per ink
+    for k, i in enumerate(ORDER):              # print order
+        for t_idx, tool in enumerate(NAMES):   # one tool at a time per ink, fresh dip on change
             used = PER_DIP[tool]
             for row in range(choice.shape[1]):
                 cols = range(choice.shape[2]) if row % 2 == 0 else reversed(range(choice.shape[2]))
@@ -155,74 +181,81 @@ def marks_from_choice(choice):
                     if used >= PER_DIP[tool]:
                         dip, used = dip + 1, 0
                     used += 1
-                    marks.append(dict(order=k, ink=i, tool=tool, strength=STRENGTHS[o % S], row=row, col=col, dip=dip, seq=seq))
+                    x = (col + 0.5 + off[k, row, col, 0] / CELL) * CELL_MM
+                    y = (row + 0.5 + off[k, row, col, 1] / CELL) * CELL_MM
+                    marks.append(dict(order=k, ink=i, tool=tool, strength=STRENGTHS[o % S], x=float(x), y=float(y),
+                                      angle=float(np.degrees(ang[k, row, col]) % 90), dip=dip, seq=seq))
                     seq += 1
-            # a new ink or tool always needs a fresh dip
     return marks
-
-
-def hard_probs(choice):
-    return jax.nn.one_hot(jnp.asarray(choice), T * S + 1)
 
 
 def write_svg(marks, ny, path):
     W, H = NX * CELL_MM, ny * CELL_MM
     f = lambda v: f"{v:.2f}"
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{f(W)}mm" height="{f(H)}mm" viewBox="0 0 {f(W)} {f(H)}">',
-           "<metadata>" + json.dumps({"prototype": "jax layered marks", "tools": "PLACEHOLDER digital footprints",
+           "<metadata>" + json.dumps({"prototype": "jax layered square marks", "tools": "PLACEHOLDER digital footprints",
                                       "print_order": [INKS[i]["label"] for i in ORDER]}) + "</metadata>",
            '<rect width="100%" height="100%" fill="#fff"/>', "<defs>"]
-    for t in TOOLS:
-        d = " ".join("M " + " L ".join(f"{f(x * CELL_MM)},{f(y * CELL_MM)}" for x, y in r) + " Z" for r in OUTLINES[t])
-        out.append(f'<symbol id="tool-{t}" overflow="visible"><path d="{d}" fill="currentColor" fill-rule="evenodd"/></symbol>')
+    for t, (hw, hh, r) in TOOLS.items():
+        out.append(f'<rect id="tool-{t}" x="{f(-hw * CELL_MM)}" y="{f(-hh * CELL_MM)}" width="{f(2 * hw * CELL_MM)}" '
+                   f'height="{f(2 * hh * CELL_MM)}" rx="{f(r * CELL_MM)}" fill="currentColor"/>')
     out.append("</defs>")
     for k, i in enumerate(ORDER):
         ink = INKS[i]
         col = "#" + "".join(f"{c:02x}" for c in ink["rgb"])
         out.append(f'<g id="print-{k + 1:02d}-{ink["role"]}" data-ink="{ink["id"]}" data-print-order="{k + 1}" color="{col}">')
         for m in (m for m in marks if m["order"] == k):
-            x, y = (m["col"] + 0.5) * CELL_MM, (m["row"] + 0.5) * CELL_MM
-            out.append(f'<use href="#tool-{m["tool"]}" x="{f(x)}" y="{f(y)}" opacity="{m["strength"]}" data-tool="{m["tool"]}" '
-                       f'data-strength="{m["strength"]}" data-dip="{m["dip"]}" data-seq="{m["seq"]}"/>')
+            out.append(f'<use href="#tool-{m["tool"]}" transform="translate({f(m["x"])} {f(m["y"])}) rotate({m["angle"]:.1f})" '
+                       f'opacity="{m["strength"]}" data-tool="{m["tool"]}" data-strength="{m["strength"]}" '
+                       f'data-dip="{m["dip"]}" data-seq="{m["seq"]}"/>')
         out.append("</g>")
     out.append("</svg>")
     path.write_text("\n".join(out))
 
 
-def to_png(img, path, scale=1):
-    im = Image.fromarray((np.clip(np.asarray(img), 0, 1) * 255).astype(np.uint8))
-    (im.resize((im.width * scale, im.height * scale), Image.NEAREST) if scale > 1 else im).save(path)
+def to_png(img, path):
+    Image.fromarray((np.clip(np.asarray(img), 0, 1) * 255).astype(np.uint8)).save(path)
+
+
+def tool_sheet(path, px=40):
+    im = Image.new("L", (px * 3 * T, px * 3), 255)
+    for n, (hw, hh, r) in enumerate(TOOLS.values()):
+        a = np.asarray(footprints(jnp.zeros((1, 1, 1, 2)), jnp.full((1, 1, 1), 0.3), jnp.asarray([[hw, hh, r]]) * CELL))[0, 0, 0, 0]
+        tile = Image.fromarray((255 * (1 - 0.85 * a)).astype(np.uint8)).resize((px * 3, px * 3), Image.LANCZOS)
+        im.paste(tile, (n * px * 3, 0))
+    im.save(path)
 
 
 def main():
-    out = HERE
     target = load_target(sys.argv[1])
-    to_png(target, out / "target.png")
-    choice = solve(target)
-    probs = hard_probs(choice)
-    final = render(probs)
-    to_png(final, out / "jax-marks.png")
-    frames = [Image.fromarray((np.asarray(render(probs, upto=k + 1)) * 255).astype(np.uint8)) for k in range(I)]
-    frames[0].save(out / "print-order.gif", save_all=True, append_images=frames[1:] + [frames[-1]] * 3, duration=700, loop=0)
+    to_png(target, HERE / "target.png")
+    tool_sheet(HERE / "tools.png")
+    choice, off, ang = solve(target)
+    probs = jax.nn.one_hot(jnp.asarray(choice), T * S + 1)
+    final = render(probs, jnp.asarray(off), jnp.asarray(ang))
+    to_png(final, HERE / "jax-marks.png")
+    frames = [Image.fromarray((np.asarray(render(probs, jnp.asarray(off), jnp.asarray(ang), upto=k + 1)) * 255).astype(np.uint8))
+              for k in range(I)]
+    frames[0].save(HERE / "print-order.gif", save_all=True, append_images=frames[1:] + [frames[-1]] * 3, duration=700, loop=0)
     strip = Image.new("RGB", (frames[0].width * 6, frames[0].height * 2), "white")
     for k, fr in enumerate(frames):
         strip.paste(fr, ((k % 6) * fr.width, (k // 6) * fr.height))
-    strip.save(out / "print-order-strip.png")
-    marks = marks_from_choice(choice)
-    write_svg(marks, choice.shape[1], out / "layered-marks.svg")
+    strip.save(HERE / "print-order-strip.png")
+    marks = marks_from(choice, off, ang)
+    write_svg(marks, choice.shape[1], HERE / "layered-marks.svg")
     per_cell = (choice != T * S).sum(0)
     report = {
         "rmse": round(float(jnp.sqrt(jnp.mean((final - target) ** 2))), 4),
         "blurred_rmse": round(float(jnp.sqrt(jnp.mean((blur(final) - blur(jnp.asarray(target))) ** 2))), 4),
         "marks": len(marks), "dips": len({m["dip"] for m in marks}),
         "marks_per_cell": {str(n): int((per_cell == n).sum()) for n in range(int(per_cell.max()) + 1)},
-        "marks_per_tool": {t: sum(m["tool"] == t for m in marks) for t in TOOLS},
+        "marks_per_tool": {t: sum(m["tool"] == t for m in marks) for t in NAMES},
         "marks_per_strength": {str(s): sum(m["strength"] == s for m in marks) for s in STRENGTHS},
         "print_order": [{"ink": INKS[i]["label"], "marks": sum(m["ink"] == i for m in marks)} for i in ORDER],
         "jax": jax.__version__, "backend": jax.default_backend(), "steps": STEPS, "grid": [NX, int(choice.shape[1])],
     }
-    (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps({k: report[k] for k in ("rmse", "blurred_rmse", "marks", "dips", "marks_per_cell")}))
+    (HERE / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    print(json.dumps({k: report[k] for k in ("rmse", "blurred_rmse", "marks", "dips", "marks_per_tool")}))
 
 
 if __name__ == "__main__":
