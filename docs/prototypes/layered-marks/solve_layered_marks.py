@@ -8,13 +8,16 @@
    centres and grid crossings, tiny wobble only). Per ink and lattice point: one tool or none,
    dilution and rotation.
 Print order is fixed: warm and light inks first, darker next, black and cold tones last; within an
-ink the brush drags go before the stamps. Composite is the legacy over-model, one ink at a time.
+ink the brush drags go before the stamps. Colour mixing is either a transparent glaze (multiply: every
+layer tints what is under it) or Mixbox pigment mixing in its latent space (MIX=glaze|mixbox). The fit
+is scored in Oklab with hue weighted up, so a cool cast costs more than in RGB.
 Tools are digital PLACEHOLDERS. The darker watercolour rim is a preview of pooling, not toolpath.
 
 Run on the GPU (project .venv has jax[cuda12]==0.10.0):
-  .venv/bin/python solve_layered_marks.py close-reference.png
+  MIX=glaze .venv/bin/python solve_layered_marks.py close-reference.png out-glaze
 """
 import json
+import os
 import sys
 from functools import partial
 from pathlib import Path
@@ -25,24 +28,30 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 HERE = Path(__file__).parent
+OUT = HERE / (sys.argv[2] if len(sys.argv) > 2 else ".")
 INKS = json.loads((HERE.parents[1] / "reproduction/2026-09-20/alpha/metadata.json").read_text())["inkset"]["inks"]
 G = 32               # solve px per pencil-grid cell
 H2 = G // 2          # stamp lattice stride: half a cell (centres + crossings, parity-masked)
 GRID_MM = 12.0       # physical grid cell for the SVG
 STRENGTHS = (0.25, 0.5, 0.85)  # light wash / medium / full ink cups
 STEPS, SEED = 1500, 0
-STAMP_COST, BRUSH_COST = 0.0015, 0.0005
+STAMP_COST, BRUSH_COST = 0.0005, 0.0005
 
 # Stamps, in grid-cell units: half width, half height, corner radius. All rotate freely.
 STAMPS = {
     "square-L": (0.42, 0.42, 0.10),
     "square-M": (0.30, 0.30, 0.07),
     "square-S": (0.20, 0.20, 0.05),
+    "pebble-M": (0.30, 0.30, 0.22),  # heavily rounded squares: the soft dabs in the pinks
+    "pebble-S": (0.19, 0.19, 0.14),
     "slab": (0.40, 0.20, 0.06),
+    "bar": (0.36, 0.09, 0.04),       # thin edge / lozenge strokes
     "chip": (0.10, 0.10, 0.02),
 }
 BRUSH = {"name": "wash-brush", "width": 1.2, "min_len": 0.8, "max_len": 3.5}  # grid units
-PER_DIP = {"square-L": 7, "square-M": 9, "square-S": 12, "slab": 8, "chip": 16, "wash-brush": 3}
+PER_DIP = {"square-L": 7, "square-M": 9, "square-S": 12, "pebble-M": 9, "pebble-S": 12, "slab": 8, "bar": 12,
+           "chip": 16, "wash-brush": 3}
+MIX = os.environ.get("MIX", "glaze")
 NAMES = list(STAMPS)
 GEOM = jnp.asarray([STAMPS[t] for t in NAMES]) * G
 S_REACH, B_REACH = 2, 3  # patch reach: stamps in half cells, brush in cells
@@ -182,12 +191,62 @@ def ink_logt(sp, so, sa, bp, bo, ba, bl, bs):
     return stamps + brush
 
 
+def _mixbox_latents():
+    import mixbox  # the official pymixbox distribution (installed package, never repos/)
+    return (jnp.asarray([mixbox.rgb_to_latent(tuple(INKS[i]["rgb"])) for i in ORDER], jnp.float32),
+            jnp.asarray(mixbox.rgb_to_latent((255, 255, 255)), jnp.float32))
+
+
+# Mixbox latent -> RGB polynomial, ported from mixbox.py _eval_polynomial (Mixbox is CC BY-NC 4.0).
+MIXBOX_C = jnp.asarray([
+    [+0.07717053, +0.02826978, +0.24832992], [+0.95912302, +0.80256528, +0.03561839],
+    [+0.74683774, +0.04868586, +0.00000000], [+0.99518138, +0.99978149, +0.99704802],
+    [+0.04819146, +0.83363781, +0.32515377], [-0.68146950, +1.46107803, +1.06980936],
+    [+0.27058419, -0.15324870, +1.98735057], [+0.80478189, +0.67093710, +0.18424500],
+    [-0.35031003, +1.37855826, +3.68865000], [+1.05128046, +1.97815239, +2.82989073],
+    [+3.21607125, +0.81270228, +1.03384539], [+2.78893374, +0.41565549, -0.04487295],
+    [+3.02162577, +2.55374103, +0.32766114], [+2.95124691, +2.81201112, +1.17578442],
+    [+2.82677043, +0.79933038, +1.81715262], [+2.99691099, +1.22593053, +1.80653661],
+    [+1.87394106, +2.05027182, -0.29835996], [+2.56609566, +7.03428198, +0.62575374],
+    [+4.08329484, -1.40408358, +2.14995522], [+6.00078678, +2.55552042, +1.90739502]])
+
+
+def mixbox_rgb(z):
+    c0, c1, c2, c3 = (z[..., k] for k in range(4))
+    mono = jnp.stack([c0**3, c1**3, c2**3, c3**3, c0*c0*c1, c0*c1*c1, c0*c0*c2, c0*c2*c2, c0*c0*c3, c0*c3*c3,
+                      c1*c1*c2, c1*c2*c2, c1*c1*c3, c1*c3*c3, c2*c2*c3, c2*c3*c3, c0*c1*c2, c0*c1*c3,
+                      c0*c2*c3, c1*c2*c3], -1)
+    return jnp.clip(mono @ MIXBOX_C + z[..., 4:], 0, 1)
+
+
+INK_Z, PAPER_Z = _mixbox_latents() if MIX == "mixbox" else (None, None)
+
+
 def composite(logt, base, upto=None):
     alpha = 1 - jnp.exp(logt)
+    n = I if upto is None else upto
+    if MIX == "mixbox":  # pigment mixing: lerp in Mixbox latent space, decode once
+        z = jnp.broadcast_to(PAPER_Z, alpha.shape[1:] + (7,))
+        for i in range(n):
+            z = z + alpha[i, ..., None] * (INK_Z[i] - z)
+        return mixbox_rgb(z) * base  # pencil grid on the paper
     out = base
-    for i in range(I if upto is None else upto):
-        out = out * (1 - alpha[i, ..., None]) + INK_RGB[i] * alpha[i, ..., None]
+    for i in range(n):  # transparent glaze: each ink filters light, layers multiply and mix
+        out = out * (1 - alpha[i, ..., None] * (1 - INK_RGB[i]))
     return out
+
+
+def oklab(rgb):
+    lin = jnp.where(rgb <= 0.04045, rgb / 12.92, ((jnp.clip(rgb, 0, 1) + 0.055) / 1.055) ** 2.4)
+    m1 = jnp.asarray([[0.4122214708, 0.5363325363, 0.0514459929], [0.2119034982, 0.6806995451, 0.1073969566],
+                      [0.0883024619, 0.2817188376, 0.6299787005]])
+    m2 = jnp.asarray([[0.2104542553, 0.7936177850, -0.0040720468], [1.9779984951, -2.4285922050, 0.4505937099],
+                      [0.0259040371, 0.7827717662, -0.8086757660]])
+    lms = jnp.cbrt(lin @ m1.T + 1e-9)
+    return lms @ m2.T
+
+
+LAB_W = jnp.asarray([1.0, 4.0, 4.0])  # lightness, green-red, blue-yellow: hue errors count more
 
 
 def blur(img, sigma=G / 2):
@@ -222,7 +281,7 @@ def solve(target):
     ny, nx = target.shape[0] // G, target.shape[1] // G
     mask = lattice_mask(2 * ny, 2 * nx)
     base = paper(ny, nx)
-    tgt, tgt_b = jnp.asarray(target), blur(jnp.asarray(target))
+    tgt, tgt_b = oklab(jnp.asarray(target)), oklab(blur(jnp.asarray(target)))
     ks = jax.random.split(jax.random.PRNGKey(SEED), 4)
     params = (0.01 * jax.random.normal(ks[0], (I, 2 * ny, 2 * nx, T * S + 1)).at[..., -1].set(1.0),
               jnp.zeros((I, 2 * ny, 2 * nx, 2)),
@@ -240,7 +299,7 @@ def solve(target):
         bp = straight_through(b_lg, k2, noise)
         bs = straight_through(b_str, k3, noise) @ jnp.asarray(STRENGTHS)  # one wash dilution per ink
         img = composite(ink_logt(sp, s_off, s_ang, bp[..., 0], b_off, b_ang, b_len, bs), base)
-        fit = jnp.mean((img - tgt) ** 2) + jnp.mean((blur(img) - tgt_b) ** 2)
+        fit = jnp.mean(LAB_W * (oklab(img) - tgt) ** 2) + jnp.mean(LAB_W * (oklab(blur(img)) - tgt_b) ** 2)
         return fit + STAMP_COST * jnp.mean(1 - sp[..., -1]) * I + BRUSH_COST * jnp.mean(1 - bp[..., -1]) * I
 
     grad = jax.jit(jax.value_and_grad(loss))
@@ -353,20 +412,21 @@ def to_png(img, path):
 
 
 def main():
+    OUT.mkdir(exist_ok=True)
     target, grid = load_target(sys.argv[1])
     ny, nx = target.shape[0] // G, target.shape[1] // G
-    to_png(target, HERE / "target.png")
+    to_png(target, OUT / "target.png")
     sol = solve(target)
     final = render_hard(sol)
-    to_png(final, HERE / "jax-marks.png")
+    to_png(final, OUT / "jax-marks.png")
     frames = [Image.fromarray((np.asarray(render_hard(sol, upto=k + 1)) * 255).astype(np.uint8)) for k in range(I)]
-    frames[0].save(HERE / "print-order.gif", save_all=True, append_images=frames[1:] + [frames[-1]] * 3, duration=700, loop=0)
+    frames[0].save(OUT / "print-order.gif", save_all=True, append_images=frames[1:] + [frames[-1]] * 3, duration=700, loop=0)
     strip = Image.new("RGB", (frames[0].width * 6, frames[0].height * 2), "white")
     for k, fr in enumerate(frames):
         strip.paste(fr, ((k % 6) * fr.width, (k // 6) * fr.height))
-    strip.save(HERE / "print-order-strip.png")
+    strip.save(OUT / "print-order-strip.png")
     marks = marks_from(sol)
-    write_svg(marks, ny, nx, HERE / "layered-marks.svg")
+    write_svg(marks, ny, nx, OUT / "layered-marks.svg")
     report = {
         "grid": grid,
         "rmse": round(float(jnp.sqrt(jnp.mean((final - target) ** 2))), 4),
@@ -376,9 +436,9 @@ def main():
         "drag_mm": round(sum(float(np.hypot(*np.subtract(*m["path"]))) for m in marks if m["mode"] == "drag"), 1),
         "marks_per_tool": {t: sum(m["tool"] == t for m in marks) for t in ["wash-brush"] + NAMES},
         "print_order": [{"ink": INKS[i]["label"], "marks": sum(m["ink"] == i for m in marks)} for i in ORDER],
-        "jax": jax.__version__, "backend": jax.default_backend(), "steps": STEPS,
+        "mix": MIX, "jax": jax.__version__, "backend": jax.default_backend(), "steps": STEPS,
     }
-    (HERE / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    (OUT / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({k: report[k] for k in ("grid", "rmse", "blurred_rmse", "marks", "drags", "dips", "marks_per_tool")}))
 
 

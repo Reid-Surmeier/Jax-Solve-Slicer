@@ -6,17 +6,21 @@
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}main{max-width:1280px;margin:auto}
 .row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media (max-width:820px){.row{grid-template-columns:1fr 1fr}}
 img{width:100%;height:auto;display:block;background:#fff}figure{margin:0}figcaption{font-size:13px;color:var(--mute)}</style></head>
-<body><main><h1 style="font-size:20px">JAX layered marks: grid, drags, stamps</h1>
+<body><main><h1 style="font-size:20px">JAX layered marks: grid, drags, stamps, glaze mixing</h1>
 <ol>
 <li><b>Grid kept.</b> The pencil grid is measured from the reference (83 px period, 15 × 19 cells) and drawn first.</li>
 <li><b>Underlayer is dragged, and unified.</b> A 1.2-cell wash brush: per ink and cell JAX may lay one stroke (angle, length up to 3.5 cells). All drags of one ink merge into one wet wash at a single dilution, so overlapping strokes of the same colour never darken into seams. In the SVG each ink's drags share one group opacity.</li>
-<li><b>Stamps on the lattice.</b> Five rotatable square tools (L, M, S square, slab, chip) placed only on cell centres and grid crossings, as in the reference, with a tiny wobble.</li>
+<li><b>Stamps on the lattice.</b> Eight rotatable square-based tools (square L/M/S, pebble M/S, slab, bar, chip) placed only on cell centres and grid crossings, as in the reference, with a tiny wobble.</li><li><b>Colour mixing: transparent glaze.</b> Every layer tints what is under it, so overlaps reveal mixtures. The fit is scored in Oklab with hue weighted up, which removed the cool cast.</li>
 <li><b>Print order</b> yellow → orange → rose → red → sepia → burgundy → green → blue → purple → royal blue → blue black → black; brush before stamps within each ink.</li>
 </ol>
 <div class="row"><figure><img src="target.png"><figcaption>Target, cropped to the grid</figcaption></figure>
 <figure><img src="brush-underlayer.png"><figcaption>Brush drags only: one even wash per ink</figcaption></figure>
 <figure><img src="jax-marks.png"><figcaption>JAX render: drags + stamps</figcaption></figure>
 <figure><a href="layered-marks.svg"><img src="svg-render.png"></a><figcaption>Exported SVG, rendered (click for file)</figcaption></figure></div>
+<h2 style="font-size:16px">Mixing model: glaze vs Mixbox (same solve, before the detail pass)</h2>
+<div class="row" style="grid-template-columns:repeat(3,1fr)"><figure><img src="target.png"><figcaption>Target</figcaption></figure>
+<figure><img src="model-glaze.png"><figcaption>Transparent glaze: RMSE 0.131 (blurred 0.040), kept</figcaption></figure>
+<figure><img src="model-mixbox.png"><figcaption>Mixbox pigment mixing: RMSE 0.148 (blurred 0.058), over-warm, pinks lost</figcaption></figure></div>
 <h2 style="font-size:16px">Build in print order</h2>
 <div class="row" style="grid-template-columns:1fr 2fr"><img src="print-order.gif"><img src="print-order-strip.png"></div>
-<p style="color:var(--mute)">1,526 marks (493 drags, 1,033 stamps) · 315 dips · RMSE 0.125 (blurred 0.036) · 4 min on the RTX 4070 SUPER · tools are placeholders · stamp watercolour rim is preview only</p></main></body></html>
+<p style="color:var(--mute)">1,483 marks (413 drags, 1,070 stamps) · 304 dips · RMSE 0.125 (blurred 0.036) · about 9 min on the RTX 4070 SUPER · tools are placeholders · stamp watercolour rim is preview only</p></main></body></html>

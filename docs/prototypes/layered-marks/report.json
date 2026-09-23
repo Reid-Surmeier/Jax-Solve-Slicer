@@ -13,70 +13,74 @@
       19
     ]
   },
-  "rmse": 0.1248,
+  "rmse": 0.1246,
   "blurred_rmse": 0.0361,
-  "marks": 1526,
-  "dips": 315,
-  "drags": 493,
-  "drag_mm": 9581.9,
+  "marks": 1483,
+  "dips": 304,
+  "drags": 413,
+  "drag_mm": 6941.8,
   "marks_per_tool": {
-    "wash-brush": 493,
-    "square-L": 253,
-    "square-M": 214,
-    "square-S": 168,
-    "slab": 288,
-    "chip": 110
+    "wash-brush": 413,
+    "square-L": 157,
+    "square-M": 138,
+    "square-S": 88,
+    "pebble-M": 107,
+    "pebble-S": 57,
+    "slab": 274,
+    "bar": 161,
+    "chip": 88
   },
   "print_order": [
     {
       "ink": "XSDK05#3 yellow",
-      "marks": 352
+      "marks": 212
     },
     {
       "ink": "XSDK05#5 orange",
-      "marks": 215
+      "marks": 174
     },
     {
       "ink": "XSDK05#21 rose",
-      "marks": 129
+      "marks": 249
     },
     {
       "ink": "XSDK05#19 red",
-      "marks": 127
+      "marks": 188
     },
     {
       "ink": "XSDK05#117 sepia",
-      "marks": 52
+      "marks": 42
     },
     {
       "ink": "XSDK05#22 burgundy",
-      "marks": 38
+      "marks": 69
     },
     {
       "ink": "XSDK05#32 fresh green",
-      "marks": 81
+      "marks": 136
     },
     {
       "ink": "XSDK05#36 blue",
-      "marks": 82
+      "marks": 138
     },
     {
       "ink": "XSDK05#24 purple",
-      "marks": 210
+      "marks": 81
     },
     {
       "ink": "XSDK05#138 royal blue",
-      "marks": 31
+      "marks": 94
     },
     {
       "ink": "XSDK05#243 blue black",
-      "marks": 88
+      "marks": 51
     },
     {
       "ink": "XSDK05#49 black",
-      "marks": 121
+      "marks": 49
     }
   ],
+  "mix": "glaze",
   "jax": "0.10.0",
   "backend": "gpu",
   "steps": 1500
