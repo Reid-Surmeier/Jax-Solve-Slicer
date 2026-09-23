@@ -302,9 +302,9 @@ def describe(name, c, im):
     return ask(PROMPT.format(name=name, text=(c.get("source_text") or "(none)")[:1500]), im, c["image_key"])
 
 
-def is_painting(im):
-    """A second, caption-blind yes/no check on every image the description kept."""
-    d, cost = ask(VERIFY, im, "verify")
+def is_painting(im, note=None):
+    """A second, caption-blind yes/no check on every image the description kept; `note` describes a style that looks unlike paint."""
+    d, cost = ask(VERIFY + (f"\nNote on this artist: {note}" if note else ""), im, "verify")
     return (None if d is None else d.get("painting") is True), cost
 
 
@@ -358,11 +358,11 @@ class Corpus:
             if column not in columns:
                 self.db.execute(f"ALTER TABLE images ADD COLUMN {column} INTEGER")
 
-    def verify(self, pairs):
+    def verify(self, a, pairs):
         """Run the painting check on each kept (row, image) pair and demote the rows that fail it."""
         pairs = [(r, im) for r, im in pairs if r["keep"]]
         with ThreadPoolExecutor(self.workers) as pool:
-            answers = list(pool.map(lambda p: is_painting(p[1]), pairs))
+            answers = list(pool.map(lambda p: is_painting(p[1], a.get("verify_note")), pairs))
         for (r, _), (ok, cost) in zip(pairs, answers):
             self.cost += cost
             r["verified"] = None if ok is None else int(ok)
@@ -398,7 +398,7 @@ class Corpus:
         for (c, _, facts), (d, cost) in zip(fresh, described):
             self.cost += cost
             rows.append({**c, **facts, "artist": a["slug"], "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **classified(a, {**c, **facts}, d)})
-        self.verify([(r, im) for r, (_, im, _) in zip(rows, fresh)])
+        self.verify(a, [(r, im) for r, (_, im, _) in zip(rows, fresh)])
         with self.db:  # one short write per batch; never hold the lock across network calls
             self.db.executemany("INSERT OR IGNORE INTO rejects VALUES (?,?,?)", rejects)
             for row in rows:
@@ -419,7 +419,7 @@ class Corpus:
                 self.cost += cost
                 r["saturation"] = saturation(im)
                 r.update(classified(a, r, d))
-            self.verify(list(zip(chunk, images)))
+            self.verify(a, list(zip(chunk, images)))
             fields = ("saturation", "kind", "depicts", "palette", "subjects", "artwork_only", "title", "year", "medium", "why_excluded", "keep", "verified")
             with self.db:
                 for r in chunk:

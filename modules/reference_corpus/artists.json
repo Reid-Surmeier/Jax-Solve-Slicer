@@ -13,6 +13,7 @@
   {"slug": "avery-singer", "name": "Avery Singer", "artsy": "avery-singer",
    "note": "Only early black-and-white works (grayscale, 2016 or earlier).",
    "only": {"grayscale": true, "max_year": 2016},
+   "verify_note": "her paintings are airbrushed grayscale images built from SketchUp models, so they look like 3D renders; those are paintings.",
    "sites": [{"url": "https://www.k-t-z.com/artists/avery-singer/", "match": "singer"}],
    "searches": ["\"Avery Singer\" 2012 painting", "\"Avery Singer\" 2013 acrylic on canvas", "\"Avery Singer\" 2014 acrylic on canvas",
                 "\"Avery Singer\" 2015 painting", "\"Avery Singer\" 2016 painting", "\"Avery Singer\" The Artists Kunsthalle Zürich 2014",
