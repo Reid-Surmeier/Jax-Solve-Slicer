@@ -13,7 +13,10 @@
   {"slug": "avery-singer", "name": "Avery Singer", "artsy": "avery-singer",
    "note": "Only early black-and-white works (grayscale, 2016 or earlier).",
    "only": {"grayscale": true, "max_year": 2016},
-   "sites": [{"url": "https://www.hauserwirth.com/artists/avery-singer/", "match": "singer", "browser": true}]},
+   "sites": [{"url": "https://www.k-t-z.com/artists/avery-singer/", "match": "singer"}],
+   "searches": ["\"Avery Singer\" 2012 painting", "\"Avery Singer\" 2013 acrylic on canvas", "\"Avery Singer\" 2014 acrylic on canvas",
+                "\"Avery Singer\" 2015 painting", "\"Avery Singer\" 2016 painting", "\"Avery Singer\" The Artists Kunsthalle Zürich 2014",
+                "\"Avery Singer\" Pictures Punish Words Stedelijk", "\"Avery Singer\" Hammer Projects 2015"]},
   {"slug": "edmond-praybe", "name": "Edmond Praybe", "instagram": "edpraybe", "artsy": "edmond-praybe",
    "sites": [{"url": "https://www.edmondpraybe.com/"}]},
   {"slug": "ruprecht-von-kaufmann", "name": "Ruprecht von Kaufmann", "instagram": "ruprecht_v_kaufmann", "artsy": "ruprecht-von-kaufmann-1",
@@ -26,7 +29,10 @@
    "note": "Identified from an owner-supplied image by Google Lens: Root Five Nude, 1974-75 (Hazlitt Holland-Hibbert).",
    "sites": [{"url": "https://artuk.org/discover/artworks/view_as/grid/search/makers:euan-uglow-19322000", "match": "uglow", "browser": true},
              {"url": "https://artcollection.dcms.gov.uk/person/uglow-euan/", "match": "uglow"},
-             {"url": "https://www.tate.org.uk/art/artists/euan-uglow-2084", "match": "uglow"}]},
+             {"url": "https://www.tate.org.uk/art/artists/euan-uglow-2084", "match": "uglow"}],
+   "searches": ["\"Euan Uglow\" nude oil on canvas", "\"Euan Uglow\" still life oil", "\"Euan Uglow\" portrait oil on canvas",
+                "\"Euan Uglow\" landscape painting", "\"Euan Uglow\" Browse & Darby", "\"Euan Uglow\" Hazlitt Holland-Hibbert",
+                "\"Euan Uglow\" auction lot oil", "\"Euan Uglow\" complete paintings"]},
   {"slug": "makiko-kudo", "name": "Makiko Kudo", "instagram": "kudo_makiko", "artsy": "makiko-kudo",
    "sites": [{"url": "https://tomiokoyamagallery.com/en/artists/makiko-kudo/", "match": "kudo"}]}
 ]

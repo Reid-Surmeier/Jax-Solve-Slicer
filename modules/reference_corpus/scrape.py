@@ -1,7 +1,7 @@
 """Targeted reference corpus: images by the listed painters, where each came from, and what it depicts, in SQLite.
 
-Sources, in order: Artsy's public GraphQL, the artists' and galleries' own sites (Scrapling), then Instagram
-(Scrape Creators API). Each new image gets one vision call through OpenRouter that classifies it and describes it.
+Sources, in order: Artsy's public GraphQL, the artists' and galleries' own sites (Scrapling), Instagram, then pages
+found by Google search (both through the Scrape Creators API). Each new image gets one vision call through OpenRouter that classifies it and describes it.
 Only paintings, murals and prints count toward an artist's limit; everything else is stored with `keep = 0`.
 
     SCRAPECREATORS_API_KEY=… OPENROUTER_API_KEY=… python scrape.py --out outputs/reference-corpus
@@ -174,7 +174,7 @@ def site(s):
             except Exception as e:  # one bad page must not end the crawl
                 print(f"  page failed {url}: {e}", file=sys.stderr)
                 continue
-            if page.status != 200:
+            if not 200 <= page.status < 300:
                 continue
             title = (page.css("title::text").get() or "").strip()
             for img in page.css("img"):
@@ -187,10 +187,14 @@ def site(s):
                         break
                     text, node = (node.get_all_text(strip=True) or "")[:400], node.parent
                 full = urljoin(url, src)
+                if s.get("require") and s["require"] not in text.lower():
+                    continue
                 yield dict(image_key=full, image_url=full, source="site", source_url=url, source_text=" | ".join(x for x in (text, title) if x))
             for a in page.css("a[href]"):
                 href = urljoin(url, a.attrib["href"]).split("#")[0]
                 if IMG_EXT.search(href) and not SKIP_SRC.search(href):
+                    if s.get("require") and s["require"] not in (a.get_all_text(strip=True) or "").lower():
+                        continue
                     yield dict(image_key=href, image_url=href, source="site", source_url=url, source_text=" | ".join(x for x in ((a.get_all_text(strip=True) or "")[:400], title) if x))
                 elif urlparse(href).netloc == host and href not in seen and depth < s.get("depth", 2) and (not match or match in href.lower()):
                     seen.add(href)
@@ -198,6 +202,21 @@ def site(s):
             time.sleep(0.5)
     finally:
         browser.close()
+
+
+SEARCH_SKIP = re.compile(r"(instagram|facebook|pinterest|twitter|x\.com|tiktok|youtube|reddit|artsy\.net|wikipedia)", re.I)
+
+
+def google(a):
+    """Pages found by Google search, each crawled alone; an image counts only if its own alt text or caption names the artist."""
+    surname = a["name"].split("(")[0].split()[-1].lower()
+    for query in a.get("searches") or [f'"{a["name"]}" painting oil on canvas', f'"{a["name"]}" exhibition']:
+        for n in (1, 2):
+            d = Fetcher.get("https://api.scrapecreators.com/v1/google/search", params={"query": query, "page": n},
+                            headers={"x-api-key": os.environ["SCRAPECREATORS_API_KEY"]}, timeout=90).json()
+            for r in d.get("results") or []:
+                if r.get("url") and not SEARCH_SKIP.search(urlparse(r["url"]).netloc):
+                    yield from site({"url": r["url"], "depth": 0, "require": surname})
 
 
 def instagram(handle):
@@ -317,7 +336,7 @@ class Corpus:
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO artists VALUES (?,?,?)", (a["slug"], a["name"], a.get("note")))
         known = [int(h, 16) for (h,) in self.db.execute("SELECT dhash FROM images WHERE artist=?", (a["slug"],))]
-        sources = ([artsy(a["artsy"])] if a.get("artsy") else []) + [site(s) for s in a.get("sites", [])] + ([instagram(a["instagram"])] if a.get("instagram") else [])
+        sources = ([artsy(a["artsy"])] if a.get("artsy") else []) + [site(s) for s in a.get("sites", [])] + ([instagram(a["instagram"])] if a.get("instagram") else []) + [google(a)]
         batch, size = [], self.workers * 3
         for c in itertools.chain(*sources):
             if self.kept(a["slug"]) >= limit:
