@@ -2,7 +2,8 @@
 
 Sources, in order: Artsy's public GraphQL, the artists' and galleries' own sites (Scrapling), Instagram, then pages
 found by Google search (both through the Scrape Creators API). Each new image gets one vision call through OpenRouter that classifies it and describes it.
-Only paintings, murals and prints count toward an artist's limit; everything else is stored with `keep = 0`.
+Only clean reproductions of paintings and prints count toward an artist's limit: no photographs of the artist, studio,
+installation, wall or street. Everything else is stored with `keep = 0`.
 
     SCRAPECREATORS_API_KEY=… OPENROUTER_API_KEY=… python scrape.py --out outputs/reference-corpus
     python scrape.py --selftest
@@ -30,7 +31,7 @@ from scrapling.parser import Selector
 
 HERE = Path(__file__).resolve().parent
 MODEL = "google/gemini-2.5-flash-lite"
-KEEP_KINDS = {"painting", "painting_detail", "mural", "print"}
+KEEP_KINDS = {"painting", "painting_detail", "print"}
 MIN_SIDE = 400
 DUP_BITS = 5  # dHash Hamming distance at or below which two images are the same work
 GRAY_SATURATION = 0.12
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS images(
   source_text TEXT,                  -- caption, alt text or catalogue line as published
   title TEXT, year TEXT, medium TEXT, dimensions TEXT,
   kind TEXT, depicts TEXT, subjects TEXT, palette TEXT, saturation REAL,
+  artwork_only INTEGER,              -- a straight reproduction of one work, cropped to it, nothing else in frame
   keep INTEGER, why_excluded TEXT, fetched_at TEXT);
 CREATE TABLE IF NOT EXISTS rejects(image_key TEXT PRIMARY KEY, artist TEXT, reason TEXT);
 CREATE VIEW IF NOT EXISTS artworks AS SELECT * FROM images WHERE keep = 1;
@@ -65,7 +67,13 @@ year: the artwork's year if the text gives one, else null
 medium: the medium if the text gives it or it is clearly visible, else null
 depicts: 2 to 4 sentences on what is depicted: subject, setting, composition, light, palette, and how the paint or ink is handled
 subjects: a list of short tags such as figure, portrait, nude, interior, landscape, still life, animal, architecture, abstraction
-palette: grayscale, limited or full_color"""
+palette: grayscale, limited or full_color
+photo_context: true if the photograph shows real surroundings outside the artwork's edges (a real person or hand, the artist,
+  a studio, gallery wall or floor, an easel, a building or street, several separate works) or has text or graphics laid over it.
+  false for a plain reproduction of one work, even with a thin margin of wall or table around it.
+  Whatever is painted inside the artwork (painted people, rooms, streets) never counts.
+text_overlay: true if any printed words, titles, dates, logos or captions appear on or around the image (a signature painted into the work does not count)
+other_artist: true if the text or the image suggests the work is by someone other than {name} (a caption crediting another artist, a famous historical work, a page from a book about another painter)"""
 
 
 def best_src(attrib):
@@ -90,9 +98,11 @@ def is_dup(h, known):
     return any(bin(h ^ k).count("1") <= DUP_BITS for k in known)
 
 
-def exclusion(kind, saturation, year, only):
+def exclusion(kind, artwork_only, saturation, year, only):
     if kind not in KEEP_KINDS:
         return f"kind: {kind}"
+    if artwork_only is not True:
+        return "not a clean reproduction"
     if only.get("grayscale") and saturation > GRAY_SATURATION:
         return "not grayscale"
     years = [int(y) for y in re.findall(r"(?:19|20)\d\d", str(year or ""))]
@@ -282,6 +292,18 @@ def describe(name, c, im):
     return None, 0.0
 
 
+def classified(a, c, d):
+    """The description-derived columns for one image; published catalogue facts win over the model's reading."""
+    d = d or {}
+    row = {"kind": d.get("kind"), "depicts": d.get("depicts"), "palette": d.get("palette"), "subjects": json.dumps(d.get("subjects") or []),
+           "artwork_only": None if not d else int(d.get("photo_context") is False),
+           "title": c.get("title") or d.get("title"), "year": c.get("year") or d.get("year"), "medium": c.get("medium") or d.get("medium")}
+    row["why_excluded"] = ("text over the image" if d.get("text_overlay") else "by another artist" if d.get("other_artist") else
+                           exclusion(row["kind"], d.get("photo_context") is False, c["saturation"], row["year"], a.get("only", {}))) if d else "undescribed"
+    row["keep"] = int(row["why_excluded"] is None)
+    return row
+
+
 class Corpus:
     def __init__(self, out, workers):
         self.out, self.workers, self.cost = Path(out), workers, 0.0
@@ -289,6 +311,8 @@ class Corpus:
         self.db = sqlite3.connect(self.out / "corpus.sqlite", timeout=300)  # one process per artist may share the file
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript(SCHEMA)
+        if "artwork_only" not in {r[1] for r in self.db.execute("PRAGMA table_info(images)")}:
+            self.db.execute("ALTER TABLE images ADD COLUMN artwork_only INTEGER")
 
     def seen(self, key):
         return self.db.execute("SELECT 1 FROM images WHERE image_key=? UNION SELECT 1 FROM rejects WHERE image_key=?", (key, key)).fetchone()
@@ -319,22 +343,32 @@ class Corpus:
             described = list(pool.map(lambda f: describe(a["name"], f[0], f[1]), fresh))
         for (c, _, facts), (d, cost) in zip(fresh, described):
             self.cost += cost
-            d = d or {}
-            row = {**c, **facts, "artist": a["slug"], "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                   "kind": d.get("kind"), "depicts": d.get("depicts"), "palette": d.get("palette"),
-                   "subjects": json.dumps(d.get("subjects") or []),
-                   "title": c.get("title") or d.get("title"), "year": c.get("year") or d.get("year"), "medium": c.get("medium") or d.get("medium")}
-            row["why_excluded"] = exclusion(row["kind"], row["saturation"], row["year"], a.get("only", {})) if d else "undescribed"
-            row["keep"] = int(row["why_excluded"] is None)
-            rows.append(row)
+            rows.append({**c, **facts, "artist": a["slug"], "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **classified(a, {**c, **facts}, d)})
         with self.db:  # one short write per batch; never hold the lock across network calls
             self.db.executemany("INSERT OR IGNORE INTO rejects VALUES (?,?,?)", rejects)
             for row in rows:
                 self.db.execute(f"INSERT OR IGNORE INTO images({','.join(row)}) VALUES ({','.join('?' * len(row))})", list(row.values()))
 
+    def recheck(self, a):
+        """Describe again every stored image of this artist that predates the artwork_only rule, from its local file."""
+        self.db.row_factory = sqlite3.Row
+        old = [dict(r) for r in self.db.execute("SELECT * FROM images WHERE artist=? AND artwork_only IS NULL", (a["slug"],))]
+        self.db.row_factory = None
+        for i in range(0, len(old), 50):
+            chunk = old[i:i + 50]
+            with ThreadPoolExecutor(self.workers) as pool:
+                described = list(pool.map(lambda r: describe(a["name"], r, Image.open(self.out / r["path"])), chunk))
+            with self.db:
+                for r, (d, cost) in zip(chunk, described):
+                    self.cost += cost
+                    new = classified(a, r, d)
+                    self.db.execute(f"UPDATE images SET {', '.join(k + '=?' for k in new)} WHERE id=?", [*new.values(), r["id"]])
+            print(f"  {a['slug']}: rechecked {i + len(chunk)}/{len(old)}, ${self.cost:.3f}", flush=True)
+
     def run(self, a, limit):
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO artists VALUES (?,?,?)", (a["slug"], a["name"], a.get("note")))
+        self.recheck(a)
         known = [int(h, 16) for (h,) in self.db.execute("SELECT dhash FROM images WHERE artist=?", (a["slug"],))]
         sources = ([artsy(a["artsy"])] if a.get("artsy") else []) + [site(s) for s in a.get("sites", [])] + ([instagram(a["instagram"])] if a.get("instagram") else []) + [google(a)]
         batch, size = [], self.workers * 3
@@ -357,10 +391,18 @@ def selftest():
     assert best_src({"src": "https://images.squarespace-cdn.com/p/x.jpg?format=300w"}).endswith("x.jpg?format=2500w")
     a = Image.linear_gradient("L").rotate(90).resize((500, 400))
     assert is_dup(dhash(a), [dhash(a.resize((250, 200)))]) and not is_dup(dhash(a), [dhash(ImageOps.mirror(a))])
-    assert exclusion("painting", 0.03, "2014", {"grayscale": True, "max_year": 2016}) is None
-    assert exclusion("painting", 0.40, "2014", {"grayscale": True}) == "not grayscale"
-    assert exclusion("painting", 0.02, "2019", {"max_year": 2016}) == "after 2016"
-    assert exclusion("installation_view", 0.1, None, {}) == "kind: installation_view"
+    assert exclusion("painting", True, 0.03, "2014", {"grayscale": True, "max_year": 2016}) is None
+    assert exclusion("painting", True, 0.40, "2014", {"grayscale": True}) == "not grayscale"
+    assert exclusion("painting", True, 0.02, "2019", {"max_year": 2016}) == "after 2016"
+    assert exclusion("installation_view", True, 0.1, None, {}) == "kind: installation_view"
+    assert exclusion("painting", False, 0.1, None, {}) == "not a clean reproduction"
+    assert exclusion("mural", True, 0.1, None, {}) == "kind: mural"
+    a = {"slug": "x", "only": {}}
+    assert classified(a, {"saturation": 0.3}, {"kind": "painting", "photo_context": False})["keep"] == 1
+    assert classified(a, {"saturation": 0.3}, {"kind": "painting", "photo_context": True})["keep"] == 0
+    assert classified(a, {"saturation": 0.3}, None)["why_excluded"] == "undescribed"
+    assert classified(a, {"saturation": 0.3}, {"kind": "painting", "photo_context": False, "text_overlay": True})["why_excluded"] == "text over the image"
+    assert classified(a, {"saturation": 0.3}, {"kind": "painting", "photo_context": False, "other_artist": True})["why_excluded"] == "by another artist"
     sqlite3.connect(":memory:").executescript(SCHEMA)
     print("reference_corpus selftest ok")
 
