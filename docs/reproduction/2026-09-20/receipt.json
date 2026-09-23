@@ -1,0 +1,41 @@
+{
+  "solver_commit": "3047e9375ba8688f76144c89359387f1af706096",
+  "svg_commit": "ebb28918cafba8db13d33488c5ed0ea47c45826e",
+  "input_crop_xyxy": [
+    117,
+    121,
+    486,
+    580
+  ],
+  "source_pixels": [
+    369,
+    459
+  ],
+  "jax_version": "0.10.0",
+  "jax_backend": "gpu",
+  "steps": 700,
+  "palette": "full12",
+  "marks": 64754,
+  "baseline_svg_sha256": "94e9c8338224b4c299007bb2bc0bdc468eb3ee6040744044478fb9ff799e6af3",
+  "baseline_mp4_sha256": "5666eee5f8dcf5113ca52f577534ba6daf3971c8fbe71ef9b0bd329da5aeb603",
+  "baseline_svg_byte_match": true,
+  "baseline_mp4_byte_match": true,
+  "existing_tests_passed": 22,
+  "alpha_solve_metrics": {
+    "rgb_rmse": 0.01708,
+    "rgb_mae": 0.007149
+  },
+  "note": "Metrics describe RGB alpha reconstruction, not actual SVG or physical painting. Packaged metadata removes machine-specific paths; legacy code and run directories were not changed.",
+  "files": {
+    "alpha-solve.png": "f99f95f0916a9adb72b744c43c6fb7a495a665e448eceaeace48e5bc1b7979b6",
+    "alpha-plates.png": "ea7eda1f6706f0003c1aee7ef01d8672bccce7d7846c3bb50f0041e8f7bd0193",
+    "painting.svg": "ded896ea601cab4641dba1a1a8c9699e7b2e9bd8081c1999bbbe55dd7a9ec68d",
+    "final-svg.png": "e2ca2035e3fadf1d5f4d84e9ec3d20cf8e2eaaf1440b9a4f6fe012b278452a5c",
+    "archived-portrait.png": "d9c576b6ec02fa51aee80ce1446be6c3cf0847c8b6488fafb106dbca364ebaf7",
+    "source.png": "22b070374b9a94343dac2e9ebd1ed3c10f54173c139b42c860377bbe7ddad2a0",
+    "alpha/alpha_stack_float32.npz": "769bc13678f6d78dfbcc3641d8a052e7f342a4bf52262422cc12eb53c2764b0e",
+    "alpha/metadata.json": "14a018634f24dd6763792cf4542dc37682da04256d74f8abe64e64687000e76c",
+    "painting-mark-build.mp4": "a30ab48c9f3cc85f5eefd36299938947bd92c2faa63a9896670b48838ff6e8b3",
+    "animation_manifest.json": "88a0b1fcb8eb55e7f034dca06a42116bf7ce045eef2baf5d638bc9ce5c7a4457"
+  }
+}

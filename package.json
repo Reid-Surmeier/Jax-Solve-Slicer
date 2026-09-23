@@ -1,0 +1,24 @@
+{
+  "name": "jax-solve-slicer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Blender-hosted Python prototype with agentic-workflow checks",
+  "scripts": {
+    "map": "node scripts/modules-map.mjs",
+    "map:check": "node scripts/modules-map.mjs --check",
+    "gates:apply": "node scripts/gates.mjs",
+    "gates:check": "node scripts/gates.mjs --check",
+    "sets:apply": "python3 scripts/project_sets.py && npm run gates:apply",
+    "test": "python3 testing/check.py",
+    "vendored:check": "node scripts/vendored-check.mjs",
+    "check": "npm run test && npm run map:check && npm run gates:check && npm run vendored:check",
+    "prototype": "bash scripts/prototype.sh"
+  },
+  "devDependencies": {
+    "@intellectronica/ruler": "0.3.44"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

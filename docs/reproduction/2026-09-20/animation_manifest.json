@@ -1,0 +1,85 @@
+{
+  "source_svg": "master_coverage_svg.svg",
+  "source_svg_sha256": "ded896ea601cab4641dba1a1a8c9699e7b2e9bd8081c1999bbbe55dd7a9ec68d",
+  "output_mp4": "painting-mark-build.mp4",
+  "fps": 18,
+  "frame_count": 208,
+  "width_px": 720,
+  "frames_per_layer": 14,
+  "start_hold_frames": 10,
+  "end_hold_frames": 30,
+  "layer_order": [
+    {
+      "label": "05 XSDK05#3 yellow",
+      "color": "#f5c41c",
+      "luminance": 0.589762,
+      "path_count": 4977
+    },
+    {
+      "label": "08 XSDK05#5 orange",
+      "color": "#e86923",
+      "luminance": 0.273803,
+      "path_count": 7200
+    },
+    {
+      "label": "04 XSDK05#21 rose",
+      "color": "#cd4986",
+      "luminance": 0.194655,
+      "path_count": 5452
+    },
+    {
+      "label": "02 XSDK05#32 fresh green",
+      "color": "#008456",
+      "luminance": 0.171744,
+      "path_count": 7200
+    },
+    {
+      "label": "09 XSDK05#19 red",
+      "color": "#c62721",
+      "luminance": 0.135666,
+      "path_count": 3085
+    },
+    {
+      "label": "11 XSDK05#36 blue",
+      "color": "#1e5bb0",
+      "luminance": 0.108928,
+      "path_count": 2745
+    },
+    {
+      "label": "06 XSDK05#24 purple",
+      "color": "#5f3b84",
+      "luminance": 0.072268,
+      "path_count": 5370
+    },
+    {
+      "label": "12 XSDK05#138 royal blue",
+      "color": "#2a4094",
+      "luminance": 0.062972,
+      "path_count": 3044
+    },
+    {
+      "label": "03 XSDK05#117 sepia",
+      "color": "#5e3d27",
+      "luminance": 0.058637,
+      "path_count": 7200
+    },
+    {
+      "label": "10 XSDK05#22 burgundy",
+      "color": "#701f3e",
+      "luminance": 0.047725,
+      "path_count": 4081
+    },
+    {
+      "label": "01 XSDK05#243 blue black",
+      "color": "#162937",
+      "luminance": 0.020323,
+      "path_count": 7200
+    },
+    {
+      "label": "07 XSDK05#49 black",
+      "color": "#100f0e",
+      "luminance": 0.004835,
+      "path_count": 7200
+    }
+  ]
+}

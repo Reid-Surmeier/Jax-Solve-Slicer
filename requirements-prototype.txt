@@ -1,0 +1,4 @@
+numpy==1.24.3
+Pillow==12.2.0
+pymixbox==2.0.0
+scrapling[fetchers]==0.4.15

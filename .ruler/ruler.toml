@@ -1,0 +1,25 @@
+# Ruler (pinned in package.json) owns one job in this repository: turning
+# .ruler/AGENTS.md into the committed root AGENTS.md and CLAUDE.md.
+#   npm run gates:apply   write both files
+#   npm run gates:check   exit 1 when either has drifted; writes nothing
+# Everything else Ruler can do is switched off here and again on the command
+# line in scripts/gates.mjs: no .bak files, no .gitignore edits, no MCP config,
+# no skill copies, no subagents, no nested .ruler folders.
+
+default_agents = ["agentsmd", "claude"]
+nested = false
+
+[gitignore]
+enabled = false
+
+[backup]
+enabled = false
+
+[skills]
+enabled = false
+
+[mcp]
+enabled = false
+
+[agents]
+enabled = false
