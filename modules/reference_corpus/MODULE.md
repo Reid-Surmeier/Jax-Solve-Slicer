@@ -16,7 +16,7 @@ Sources, in order, stopping once an artist's limit is reached: Artsy's public Gr
 `outputs/reference-corpus/corpus.sqlite` (git-ignored, with `images/<artist>/`):
 
 - `images` holds every stored image, including the source page (`source_url`), the published caption or catalogue line (`source_text`), title, year, medium, `kind`, `depicts`, `subjects`, `palette`, and `keep`/`why_excluded`.
-- `artworks` is the view of kept rows: paintings, painting details and prints that the model marks `artwork_only` and that pass the artist's `only` filter. Avery Singer's filter is grayscale work from 2016 or earlier.
+- `artworks` is the view of kept rows: paintings, painting details and prints that the model marks `artwork_only` and that pass the artist's `only` filter. Avery Singer's filter is black-and-white work from 2016 or earlier: the model must label it grayscale and its 95th-percentile saturation must be at or below 0.25.
 - `rejects` holds images skipped as small, duplicate or unreachable, so a rerun does not fetch them again.
 
 Run with both keys injected through the Bitwarden runner:

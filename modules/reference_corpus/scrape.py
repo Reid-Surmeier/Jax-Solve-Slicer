@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
-from PIL import Image, ImageOps, ImageStat
+from PIL import Image, ImageOps
 from scrapling.fetchers import Fetcher, StealthyFetcher
 from scrapling.parser import Selector
 
@@ -34,7 +34,7 @@ MODEL = "google/gemini-2.5-flash-lite"
 KEEP_KINDS = {"painting", "painting_detail", "print"}
 MIN_SIDE = 400
 DUP_BITS = 5  # dHash Hamming distance at or below which two images are the same work
-GRAY_SATURATION = 0.12
+GRAY_SATURATION = 0.25  # at or below this 95th-percentile saturation, and labelled grayscale, a work counts as black and white
 IMG_EXT = re.compile(r"\.(jpe?g|png|webp)(\?|$)", re.I)
 SKIP_SRC = re.compile(r"(logo|icon|sprite|avatar|favicon|placeholder|\.svg|\.gif|^data:)", re.I)
 
@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS images(
   source_url TEXT,                   -- the page or post the image was found on
   source_text TEXT,                  -- caption, alt text or catalogue line as published
   title TEXT, year TEXT, medium TEXT, dimensions TEXT,
-  kind TEXT, depicts TEXT, subjects TEXT, palette TEXT, saturation REAL,
+  kind TEXT, depicts TEXT, subjects TEXT, palette TEXT,
+  saturation REAL,                   -- 95th-percentile HSV saturation, 0..1
   artwork_only INTEGER,              -- a straight reproduction of one work, cropped to it, nothing else in frame
   keep INTEGER, why_excluded TEXT, fetched_at TEXT);
 CREATE TABLE IF NOT EXISTS rejects(image_key TEXT PRIMARY KEY, artist TEXT, reason TEXT);
@@ -62,6 +63,7 @@ Text published with the image (caption, alt text or catalogue line; may be empty
 
 Return one JSON object with these keys:
 kind: one of painting, painting_detail, print, drawing, mural, sculpture, installation_view, studio_or_process, exhibition_graphic, photo_other
+  (any photograph of a real person, the artist included, is photo_other)
 title: the title of this artwork if the text names it (not an exhibition, course or event name), else null
 year: the artwork's year if the text gives one, else null
 medium: the medium if the text gives it or it is clearly visible, else null
@@ -99,12 +101,22 @@ def is_dup(h, known):
     return any(bin(h ^ k).count("1") <= DUP_BITS for k in known)
 
 
-def exclusion(kind, artwork_only, saturation, year, only):
+def saturation(im):
+    """95th-percentile saturation: a mean hides a coloured passage on a white ground."""
+    hist = im.convert("RGB").convert("HSV").getchannel("S").histogram()
+    total, seen = sum(hist), 0
+    for level, count in enumerate(hist):
+        seen += count
+        if seen >= 0.95 * total:
+            return round(level / 255, 4)
+
+
+def exclusion(kind, artwork_only, saturation, year, only, palette=None):
     if kind not in KEEP_KINDS:
         return f"kind: {kind}"
     if artwork_only is not True:
         return "not a clean reproduction"
-    if only.get("grayscale") and saturation > GRAY_SATURATION:
+    if only.get("grayscale") and (saturation > GRAY_SATURATION or palette != "grayscale"):
         return "not grayscale"
     years = [int(y) for y in re.findall(r"(?:19|20)\d\d", str(year or ""))]
     if only.get("max_year") and years and min(years) > only["max_year"]:
@@ -311,7 +323,7 @@ def classified(a, c, d):
            "artwork_only": None if not d else int(d.get("photo_context") is False),
            "title": c.get("title") or d.get("title"), "year": c.get("year") or d.get("year"), "medium": c.get("medium") or d.get("medium")}
     row["why_excluded"] = ("text over the image" if d.get("text_overlay") else "by another artist" if d.get("other_artist") else
-                           exclusion(row["kind"], d.get("photo_context") is False, c["saturation"], row["year"], a.get("only", {}))) if d else "undescribed"
+                           exclusion(row["kind"], d.get("photo_context") is False, c["saturation"], row["year"], a.get("only", {}), row["palette"])) if d else "undescribed"
     row["keep"] = int(row["why_excluded"] is None)
     return row
 
@@ -349,8 +361,7 @@ class Corpus:
             path = self.out / "images" / a["slug"] / f"{sha[:16]}.{'jpg' if im.format == 'JPEG' else (im.format or 'img').lower()}"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(body)
-            sat = ImageStat.Stat(im.convert("RGB").convert("HSV").getchannel("S")).mean[0] / 255
-            fresh.append((c, im, dict(sha256=sha, dhash=f"{h:016x}", path=str(path.relative_to(self.out)), width=im.size[0], height=im.size[1], saturation=round(sat, 4))))
+            fresh.append((c, im, dict(sha256=sha, dhash=f"{h:016x}", path=str(path.relative_to(self.out)), width=im.size[0], height=im.size[1], saturation=saturation(im))))
         with ThreadPoolExecutor(self.workers) as pool:
             described = list(pool.map(lambda f: describe(a["name"], f[0], f[1]), fresh))
         for (c, _, facts), (d, cost) in zip(fresh, described):
@@ -369,11 +380,13 @@ class Corpus:
         for i in range(0, len(old), 50):
             chunk = old[i:i + 50]
             with ThreadPoolExecutor(self.workers) as pool:
-                described = list(pool.map(lambda r: describe(a["name"], r, Image.open(self.out / r["path"])), chunk))
+                images = [Image.open(self.out / r["path"]) for r in chunk]
+                described = list(pool.map(lambda ri: describe(a["name"], ri[0], ri[1]), zip(chunk, images)))
             with self.db:
-                for r, (d, cost) in zip(chunk, described):
+                for r, im, (d, cost) in zip(chunk, images, described):
                     self.cost += cost
-                    new = classified(a, r, d)
+                    r["saturation"] = saturation(im)
+                    new = {"saturation": r["saturation"], **classified(a, r, d)}
                     self.db.execute(f"UPDATE images SET {', '.join(k + '=?' for k in new)} WHERE id=?", [*new.values(), r["id"]])
             print(f"  {a['slug']}: rechecked {i + len(chunk)}/{len(old)}, ${self.cost:.3f}", flush=True)
 
@@ -403,8 +416,13 @@ def selftest():
     assert best_src({"src": "https://images.squarespace-cdn.com/p/x.jpg?format=300w"}).endswith("x.jpg?format=2500w")
     a = Image.linear_gradient("L").rotate(90).resize((500, 400))
     assert is_dup(dhash(a), [dhash(a.resize((250, 200)))]) and not is_dup(dhash(a), [dhash(ImageOps.mirror(a))])
-    assert exclusion("painting", True, 0.03, "2014", {"grayscale": True, "max_year": 2016}) is None
-    assert exclusion("painting", True, 0.40, "2014", {"grayscale": True}) == "not grayscale"
+    assert exclusion("painting", True, 0.03, "2014", {"grayscale": True, "max_year": 2016}, "grayscale") is None
+    assert exclusion("painting", True, 0.40, "2014", {"grayscale": True}, "grayscale") == "not grayscale"
+    assert exclusion("painting", True, 0.03, "2014", {"grayscale": True}, "limited") == "not grayscale"
+    assert saturation(Image.new("RGB", (100, 100), "white")) == 0
+    stripe = Image.new("RGB", (100, 100), "white")
+    stripe.paste((255, 0, 0), (0, 0, 100, 10))
+    assert saturation(stripe) == 1.0
     assert exclusion("painting", True, 0.02, "2019", {"max_year": 2016}) == "after 2016"
     assert exclusion("installation_view", True, 0.1, None, {}) == "kind: installation_view"
     assert exclusion("painting", False, 0.1, None, {}) == "not a clean reproduction"
