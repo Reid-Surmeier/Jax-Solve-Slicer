@@ -72,7 +72,8 @@ photo_context: true if the photograph shows real surroundings outside the artwor
   a studio, gallery wall or floor, an easel, a building or street, several separate works) or has text or graphics laid over it.
   false for a plain reproduction of one work, even with a thin margin of wall or table around it.
   Whatever is painted inside the artwork (painted people, rooms, streets) never counts.
-text_overlay: true if any printed words, titles, dates, logos or captions appear on or around the image (a signature painted into the work does not count)
+text_overlay: true only if typeset words, dates, logos or a caption are visibly printed in the image pixels on top of or beside the work,
+  as on a flyer, poster, magazine page or book cover. The published text given above never counts, and neither do letters painted into the work itself
 other_artist: true if the text or the image suggests the work is by someone other than {name} (a caption crediting another artist, a famous historical work, a page from a book about another painter)"""
 
 
