@@ -27,9 +27,9 @@ def args():
     ap.add_argument("--layer", type=float, default=0.2)
     ap.add_argument("--grid", type=float, default=0.25, help="landform grid spacing, mm")
     ap.add_argument("--relief", type=float, default=0.03, help="printed height per mm of distance")
-    # 30 degrees off the plate's axes, so the four sides of a rectangle print as four tones
-    # (light, mid grey, black-grey, black) the way the back of the reference plate does.
-    ap.add_argument("--light-from", type=float, default=300.0, help="slopes facing this way print light, degrees")
+    # Measured on the reference plate (docs/research/direction-colour-model.md): slopes facing
+    # 81.5 degrees print light on the top face, 304 on the bed face. Both are +-5 or less.
+    ap.add_argument("--light-from", type=float, default=81.5, help="slopes facing this way print light, degrees")
     ap.add_argument("--slicer-direction", action="store_true", help="keep the add-on's loop direction")
     ap.add_argument("--width-px", type=int, default=2400)
     ap.add_argument("--samples", type=int, default=48)
@@ -159,7 +159,7 @@ def landform_group():
 def plate_group(filament, base):
     """Toolpath points -> tone from travel direction -> beads on a shallow relief."""
     t, gin, gout, ids = group("Plate", [
-        ("Landform", "NodeSocketObject", None), ("Light from", "NodeSocketFloat", 300.0),
+        ("Landform", "NodeSocketObject", None), ("Light from", "NodeSocketFloat", 81.5),
         ("Uphill on left", "NodeSocketBool", True), ("Relief", "NodeSocketFloat", 0.03),
         ("Bead width", "NodeSocketFloat", 0.42), ("Layer height", "NodeSocketFloat", 0.2)], geometry_in=True)
     path = node(t, "GeometryNodeMeshToCurve", {"Mesh": gin["Geometry"]}).outputs[0]
@@ -182,7 +182,7 @@ def plate_group(filament, base):
     heading = xyz(t, node(t, "ShaderNodeVectorMath", {0: vec(
         t, calc(t, "MULTIPLY", tx, flip), calc(t, "MULTIPLY", ty, flip))}, operation="NORMALIZE").outputs[0])
     axis = calc(t, "RADIANS", calc(t, "ADD", gin["Light from"], 90.0))
-    # First guess for the filament: tone follows the cosine of heading against one axis.
+    # Measured: tone follows the cosine of heading against one axis (misfit 0.10 of the span).
     tone = calc(t, "ADD", 0.5, calc(t, "MULTIPLY", 0.5, calc(
         t, "ADD", calc(t, "MULTIPLY", heading[0], calc(t, "COSINE", axis)),
         calc(t, "MULTIPLY", heading[1], calc(t, "SINE", axis)))))
@@ -220,8 +220,8 @@ def materials():
     tone = nt.nodes.new("ShaderNodeAttribute")
     tone.attribute_name = "tone"
     ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = (0.006, 0.006, 0.007, 1)   # charcoal half
-    ramp.color_ramp.elements[1].color = (0.62, 0.64, 0.67, 1)      # silver half
+    ramp.color_ramp.elements[0].color = (0.058, 0.054, 0.050, 1)   # dark half, sRGB 68,66,63 as measured
+    ramp.color_ramp.elements[1].color = (0.413, 0.438, 0.442, 1)   # light half, sRGB 172,177,177 as measured
     bsdf = nt.nodes["Principled BSDF"]
     bsdf.inputs["Metallic"].default_value, bsdf.inputs["Roughness"].default_value = 0.2, 0.4
     nt.links.new(tone.outputs["Fac"], ramp.inputs["Fac"])

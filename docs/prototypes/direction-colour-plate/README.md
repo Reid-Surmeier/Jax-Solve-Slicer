@@ -22,14 +22,14 @@ GeoSlicer is https://github.com/luigipacheco/fabnodes at commit `817d7db`. Copy 
 ```bash
 python3 vectorize.py PICTURE outlines.svg --crop X0 Y0 X1 Y1
 blender -b --python build_preview.py -- --svg outlines.svg --addon-parent ADDONS --out OUT
-blender -b --python build_preview.py -- --addon-parent ADDONS --out OUT   # rectangle check only
+blender -b --python build_preview.py -- --addon-parent ADDONS --out OUT --light-from 304   # rectangle check, bed face
 ```
 
 The script stops with an error unless at least 97% of bead points carry the tone their slope's facing asks for.
 
 ## What is a guess
 
-- The filament: tone is the cosine of travel direction against one axis, between a charcoal and a silver. The colour-model research ticket replaces this.
+- The filament is no longer a guess: the cosine curve, its axis on each face and the two colours are measured from photos of the reference plate (see `docs/research/direction-colour-model.md` on branch `research/direction-colour-model`). The colours have no grey reference, and the two faces' axes differ by about 25 degrees for an unknown reason.
 - Outlines are the edges of the drawn lines, and the lines are the low points of the relief.
 - The relief is the landform scaled to 3%.
 - Small specks along the drawn lines are tiny loops inside the line's own width.
