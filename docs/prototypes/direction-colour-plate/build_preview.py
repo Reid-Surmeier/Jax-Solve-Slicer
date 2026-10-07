@@ -27,7 +27,9 @@ def args():
     ap.add_argument("--layer", type=float, default=0.2)
     ap.add_argument("--grid", type=float, default=0.25, help="landform grid spacing, mm")
     ap.add_argument("--relief", type=float, default=0.03, help="printed height per mm of distance")
-    ap.add_argument("--light-from", type=float, default=135.0, help="slopes facing this way print light, degrees")
+    # 30 degrees off the plate's axes, so the four sides of a rectangle print as four tones
+    # (light, mid grey, black-grey, black) the way the back of the reference plate does.
+    ap.add_argument("--light-from", type=float, default=300.0, help="slopes facing this way print light, degrees")
     ap.add_argument("--slicer-direction", action="store_true", help="keep the add-on's loop direction")
     ap.add_argument("--width-px", type=int, default=2400)
     ap.add_argument("--samples", type=int, default=48)
@@ -157,7 +159,7 @@ def landform_group():
 def plate_group(filament, base):
     """Toolpath points -> tone from travel direction -> beads on a shallow relief."""
     t, gin, gout, ids = group("Plate", [
-        ("Landform", "NodeSocketObject", None), ("Light from", "NodeSocketFloat", 135.0),
+        ("Landform", "NodeSocketObject", None), ("Light from", "NodeSocketFloat", 300.0),
         ("Uphill on left", "NodeSocketBool", True), ("Relief", "NodeSocketFloat", 0.03),
         ("Bead width", "NodeSocketFloat", 0.42), ("Layer height", "NodeSocketFloat", 0.2)], geometry_in=True)
     path = node(t, "GeometryNodeMeshToCurve", {"Mesh": gin["Geometry"]}).outputs[0]
@@ -221,7 +223,7 @@ def materials():
     ramp.color_ramp.elements[0].color = (0.006, 0.006, 0.007, 1)   # charcoal half
     ramp.color_ramp.elements[1].color = (0.62, 0.64, 0.67, 1)      # silver half
     bsdf = nt.nodes["Principled BSDF"]
-    bsdf.inputs["Metallic"].default_value, bsdf.inputs["Roughness"].default_value = 0.35, 0.35
+    bsdf.inputs["Metallic"].default_value, bsdf.inputs["Roughness"].default_value = 0.2, 0.4
     nt.links.new(tone.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
     base = bpy.data.materials.new("Under the beads")
